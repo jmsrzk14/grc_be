@@ -1,0 +1,106 @@
+package data
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// --- GORM Models (representasi tabel di database) ---
+
+// TenantModel adalah model GORM untuk tabel tenants.
+type TenantModel struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name      string    `gorm:"not null"`
+	Type      string    `gorm:"not null"`
+	Status    string    `gorm:"not null;default:'Active'"`
+	CreatedAt time.Time
+}
+
+func (TenantModel) TableName() string { return "tenants" }
+
+// PropertyModel adalah model GORM untuk tabel properties.
+type PropertyModel struct {
+	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name        string    `gorm:"not null;uniqueIndex"`
+	Description string    `gorm:"type:text"`
+}
+
+func (PropertyModel) TableName() string { return "properties" }
+
+// TenantPropertyModel adalah model GORM untuk tabel tenants_properties.
+type TenantPropertyModel struct {
+	ID         uuid.UUID `gorm:"type:uuid;primaryKey"`
+	TenantID   uuid.UUID `gorm:"type:uuid;not null;index"`
+	PropertyID uuid.UUID `gorm:"type:uuid;not null;index"`
+}
+
+func (TenantPropertyModel) TableName() string { return "tenants_properties" }
+
+// RegulationModel adalah model GORM untuk tabel regulations.
+type RegulationModel struct {
+	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Title          string    `gorm:"not null"`
+	RegulationType string    `gorm:"not null"` // POJK, SEOJK, UU
+	IssuedDate     time.Time
+	Status         string `gorm:"not null;default:'Active'"` // Active, Revoked
+}
+
+func (RegulationModel) TableName() string { return "regulations" }
+
+// RegulationItemModel adalah model GORM untuk tabel regulation_items.
+type RegulationItemModel struct {
+	ID              uuid.UUID `gorm:"type:uuid;primaryKey"`
+	RegulationID    uuid.UUID `gorm:"type:uuid;not null;index"`
+	ReferenceNumber string    `gorm:"not null"` // e.g., 'Pasal 1 ayat 1'
+	Content         string    `gorm:"type:text"`
+}
+
+func (RegulationItemModel) TableName() string { return "regulation_items" }
+
+// RegulationPropertyMappingModel adalah model GORM untuk tabel regulation_properties_mapping.
+type RegulationPropertyMappingModel struct {
+	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
+	RegulationID uuid.UUID `gorm:"type:uuid;not null;index"`
+	PropertyID   uuid.UUID `gorm:"type:uuid;not null;index"`
+}
+
+func (RegulationPropertyMappingModel) TableName() string { return "regulation_properties_mapping" }
+
+// AssessmentSessionModel adalah model GORM untuk tabel assessment_sessions.
+type AssessmentSessionModel struct {
+	ID         uuid.UUID `gorm:"type:uuid;primaryKey"`
+	TenantID   uuid.UUID `gorm:"type:uuid;not null;index"`
+	Title      string    `gorm:"not null"`
+	PeriodYear int       `gorm:"not null"`
+	Status     string    `gorm:"not null;default:'Draft'"` // Draft, In_Progress, Completed
+	CreatedAt  time.Time
+}
+
+func (AssessmentSessionModel) TableName() string { return "assessment_sessions" }
+
+// AssessmentResultModel adalah model GORM untuk tabel assessment_results.
+type AssessmentResultModel struct {
+	ID               uuid.UUID `gorm:"type:uuid;primaryKey"`
+	SessionID        uuid.UUID `gorm:"type:uuid;not null;index"`
+	RegulationItemID uuid.UUID `gorm:"type:uuid;not null;index"`
+	ComplianceStatus string    `gorm:"not null"` // YES, NO, N/A
+	EvidenceLink     string
+	Remarks          string    `gorm:"type:text"`
+	UpdatedAt        time.Time
+}
+
+func (AssessmentResultModel) TableName() string { return "assessment_results" }
+
+// RegulationAssessmentModel adalah model GORM untuk tabel regulation_assesments.
+type RegulationAssessmentModel struct {
+	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
+	RegulationID uuid.UUID `gorm:"type:uuid;not null;index"`
+	SessionID    uuid.UUID `gorm:"type:uuid;not null;index"`
+	AmountPass   int       `gorm:"default:0"`
+	AmountFail   int       `gorm:"default:0"`
+	AmountNA     int       `gorm:"default:0"`
+}
+
+func (RegulationAssessmentModel) TableName() string { return "regulation_assesments" }
+

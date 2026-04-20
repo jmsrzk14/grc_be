@@ -1,0 +1,140 @@
+basePath: /
+definitions:
+  service.CreateTenantRequest:
+    properties:
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  service.TenantResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  service.UpdateTenantRequest:
+    properties:
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+host: localhost:8000
+info:
+  contact: {}
+  description: Governance, Risk, and Compliance (GRC) Backend System.
+  title: GRC Backend API
+  version: "1.0"
+paths:
+  /api/v1/tenants:
+    get:
+      description: Get a list of all tenants
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/service.TenantResponse'
+            type: array
+      summary: List all tenants
+      tags:
+      - tenants
+    post:
+      consumes:
+      - application/json
+      description: Create a new tenant (BPR/BPRS)
+      parameters:
+      - description: Tenant Data
+        in: body
+        name: tenant
+        required: true
+        schema:
+          $ref: '#/definitions/service.CreateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/service.TenantResponse'
+      summary: Create a new tenant
+      tags:
+      - tenants
+  /api/v1/tenants/{id}:
+    delete:
+      description: Delete a tenant by ID
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete tenant
+      tags:
+      - tenants
+    get:
+      description: Get a specific tenant details
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TenantResponse'
+      summary: Get tenant by ID
+      tags:
+      - tenants
+    put:
+      consumes:
+      - application/json
+      description: Update an existing tenant
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated Data
+        in: body
+        name: tenant
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TenantResponse'
+      summary: Update tenant
+      tags:
+      - tenants
+swagger: "2.0"

@@ -1,0 +1,91 @@
+package biz
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// --- Tenant & Organization Domain ---
+
+// Tenant merepresentasikan organisasi (BPR/BPRS) yang menggunakan sistem.
+type Tenant struct {
+	ID        uuid.UUID
+	Name      string
+	Type      string // e.g., 'BPR', 'BPRS'
+	Status    string // e.g., 'Active', 'Inactive'
+	CreatedAt time.Time
+}
+
+// Property merepresentasikan kategori aset (e.g., 'Teknologi', 'SDM', 'Fisik').
+type Property struct {
+	ID          uuid.UUID
+	Name        string
+	Description string
+}
+
+// TenantProperty adalah mapping many-to-many antara Tenant dan Property.
+type TenantProperty struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	PropertyID uuid.UUID
+}
+
+// --- Regulation Domain ---
+
+// Regulation merepresentasikan dokumen regulasi (POJK, SEOJK, UU).
+type Regulation struct {
+	ID             uuid.UUID
+	Title          string
+	RegulationType string // POJK, SEOJK, UU
+	IssuedDate     time.Time
+	Status         string // Active, Revoked
+}
+
+// RegulationItem merepresentasikan item/pasal dalam suatu regulasi.
+type RegulationItem struct {
+	ID              uuid.UUID
+	RegulationID    uuid.UUID
+	ReferenceNumber string // e.g., 'Pasal 1 ayat 1'
+	Content         string
+}
+
+// RegulationPropertyMapping adalah mapping antara regulasi dan kategori aset.
+type RegulationPropertyMapping struct {
+	ID           uuid.UUID
+	RegulationID uuid.UUID
+	PropertyID   uuid.UUID
+}
+
+// --- Assessment Domain ---
+
+// AssessmentSession merepresentasikan satu sesi penilaian compliance.
+type AssessmentSession struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	Title      string
+	PeriodYear int
+	Status     string // Draft, In_Progress, Completed
+	CreatedAt  time.Time
+}
+
+// AssessmentResult merepresentasikan hasil penilaian per item regulasi.
+type AssessmentResult struct {
+	ID               uuid.UUID
+	SessionID        uuid.UUID
+	RegulationItemID uuid.UUID
+	ComplianceStatus string // YES, NO, N/A
+	EvidenceLink     string
+	Remarks          string
+	UpdatedAt        time.Time
+}
+
+// RegulationAssessment merupakan ringkasan hasil assessment per regulasi dalam satu sesi.
+type RegulationAssessment struct {
+	ID           uuid.UUID
+	RegulationID uuid.UUID
+	SessionID    uuid.UUID
+	AmountPass   int
+	AmountFail   int
+	AmountNA     int
+}

@@ -1,0 +1,12 @@
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 30s
+
+data:
+  database:
+    driver: postgres
+    source: "host=localhost user=postgres password=Tambunan140705 dbname=grc_db port=5432 sslmode=disable TimeZone=Asia/Jakarta"
+
+log:
+  level: INFO

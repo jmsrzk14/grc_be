@@ -1,0 +1,237 @@
+openapi: 3.0.3
+info:
+  title: GRC Backend API
+  description: Governance, Risk, and Compliance (GRC) Backend System.
+  version: "1.0"
+
+paths:
+  /api/v1/tenants:
+    get:
+      tags:
+        - TenantsService
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTenantsResponse'
+    post:
+      tags:
+        - TenantsService
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+
+  /api/v1/tenants/{id}:
+    get:
+      tags:
+        - TenantsService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+    put:
+      tags:
+        - TenantsService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+    delete:
+      tags:
+        - TenantsService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/properties:
+    get:
+      tags:
+        - PropertiesService
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+        - PropertiesService
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/regulations:
+    get:
+      tags:
+        - RegulationsService
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+        - RegulationsService
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/regulations/{id}/items:
+    get:
+      tags:
+        - RegulationsService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+        - RegulationsService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/assessments/sessions:
+    get:
+      tags:
+        - AssessmentsService
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+        - AssessmentsService
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/assessments/sessions/{id}/results:
+    get:
+      tags:
+        - AssessmentsService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    post:
+      tags:
+        - AssessmentsService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/assessments/sessions/{id}/summaries:
+    get:
+      tags:
+        - AssessmentsService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+components:
+  schemas:
+    TenantResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    CreateTenantRequest:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+    UpdateTenantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+    ListTenantsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantResponse'
