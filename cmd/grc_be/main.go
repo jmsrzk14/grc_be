@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
+	"github.com/go-kratos/kratos/v2/config/env"
 	"github.com/go-kratos/kratos/v2/config/file"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/transport/http"
@@ -20,14 +21,8 @@ import (
 // flagconf is the config flag.
 var flagconf string
 
-// @title GRC Backend API
-// @version 1.0
-// @description Governance, Risk, and Compliance (GRC) Backend System.
-// @host localhost:8000
-// @BasePath /
-
 func init() {
-	flag.StringVar(&flagconf, "conf", "../../configs", "config path, eg: -conf config.yaml")
+	flag.StringVar(&flagconf, "conf", "configs", "config path, eg: -conf config.yaml")
 }
 
 func newApp(logger log.Logger, hs *http.Server) *kratos.App {
@@ -52,6 +47,7 @@ func main() {
 	c := config.New(
 		config.WithSource(
 			file.NewSource(flagconf),
+			env.NewSource("GRC_"),
 		),
 	)
 	defer c.Close()
@@ -63,6 +59,11 @@ func main() {
 	var bc conf.Bootstrap
 	if err := c.Scan(&bc); err != nil {
 		panic(err)
+	}
+
+	// Railway dynamic port override
+	if port := os.Getenv("PORT"); port != "" {
+		bc.Server.Http.Addr = ":" + port
 	}
 
 	// Manual Dependency Injection (tanpa Wire agar cepat)
