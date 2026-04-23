@@ -1,237 +1,852 @@
-openapi: 3.0.3
+definitions:
+  grc_be_internal_biz.RegulationAssessment:
+    properties:
+      amountFail:
+        type: integer
+      amountNA:
+        type: integer
+      amountPass:
+        type: integer
+      id:
+        type: string
+      regulationID:
+        type: string
+      sessionID:
+        type: string
+    type: object
+  grc_be_internal_biz.RegulationPropertyMapping:
+    properties:
+      id:
+        type: string
+      propertyID:
+        type: string
+      regulationID:
+        type: string
+    type: object
+  internal_service.AddMappingRequest:
+    properties:
+      property_id:
+        type: string
+    type: object
+  internal_service.CreatePropertyRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  internal_service.CreateRegulationItemRequest:
+    properties:
+      content:
+        type: string
+      reference_number:
+        type: string
+    type: object
+  internal_service.CreateRegulationRequest:
+    properties:
+      issued_date:
+        type: string
+      regulation_type:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  internal_service.CreateSessionRequest:
+    properties:
+      period_year:
+        type: integer
+      tenant_id:
+        type: string
+      title:
+        type: string
+    type: object
+  internal_service.CreateTenantRequest:
+    properties:
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_service.PropertyResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  internal_service.RegulationItemResponse:
+    properties:
+      content:
+        type: string
+      id:
+        type: string
+      reference_number:
+        type: string
+      regulation_id:
+        type: string
+    type: object
+  internal_service.RegulationResponse:
+    properties:
+      id:
+        type: string
+      issued_date:
+        type: string
+      regulation_type:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  internal_service.ResultResponse:
+    properties:
+      compliance_status:
+        type: string
+      evidence_link:
+        type: string
+      id:
+        type: string
+      regulation_item_id:
+        type: string
+      remarks:
+        type: string
+      session_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  internal_service.SessionResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      period_year:
+        type: integer
+      status:
+        type: string
+      tenant_id:
+        type: string
+      title:
+        type: string
+    type: object
+  internal_service.SubmitResultRequest:
+    properties:
+      compliance_status:
+        type: string
+      evidence_link:
+        type: string
+      regulation_item_id:
+        type: string
+      remarks:
+        type: string
+    type: object
+  internal_service.TenantResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_service.UpdateRegulationRequest:
+    properties:
+      issued_date:
+        type: string
+      regulation_type:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  internal_service.UpdateTenantRequest:
+    properties:
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
 info:
-  title: GRC Backend API
-  description: Governance, Risk, and Compliance (GRC) Backend System.
+  contact: {}
+  description: API documentation for Governance, Risk, and Compliance system.
+  title: GRC API
   version: "1.0"
-
 paths:
-  /api/v1/tenants:
-    get:
-      tags:
-        - TenantsService
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListTenantsResponse'
-    post:
-      tags:
-        - TenantsService
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTenantRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TenantResponse'
-
-  /api/v1/tenants/{id}:
-    get:
-      tags:
-        - TenantsService
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TenantResponse'
-    put:
-      tags:
-        - TenantsService
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTenantRequest'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TenantResponse'
-    delete:
-      tags:
-        - TenantsService
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-
-  /api/v1/properties:
-    get:
-      tags:
-        - PropertiesService
-      responses:
-        '200':
-          description: OK
-    post:
-      tags:
-        - PropertiesService
-      responses:
-        '201':
-          description: Created
-
-  /api/v1/regulations:
-    get:
-      tags:
-        - RegulationsService
-      responses:
-        '200':
-          description: OK
-    post:
-      tags:
-        - RegulationsService
-      responses:
-        '201':
-          description: Created
-
-  /api/v1/regulations/{id}/items:
-    get:
-      tags:
-        - RegulationsService
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-    post:
-      tags:
-        - RegulationsService
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '201':
-          description: Created
-
   /api/v1/assessments/sessions:
     get:
-      tags:
-        - AssessmentsService
+      description: Get a list of all assessment sessions, optionally filtered by tenant_id
+      parameters:
+      - description: Tenant ID Filter
+        in: query
+        name: tenant_id
+        type: string
+      produces:
+      - application/json
       responses:
-        '200':
+        "200":
           description: OK
-    post:
+          schema:
+            items:
+              $ref: '#/definitions/internal_service.SessionResponse'
+            type: array
       tags:
-        - AssessmentsService
+      - assessments
+    post:
+      consumes:
+      - application/json
+      description: Create a new assessment session for a tenant
+      parameters:
+      - description: Session Data
+        in: body
+        name: session
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.CreateSessionRequest'
+      produces:
+      - application/json
       responses:
-        '201':
+        "201":
           description: Created
-
+          schema:
+            $ref: '#/definitions/internal_service.SessionResponse'
+      tags:
+      - assessments
+  /api/v1/assessments/sessions/{id}:
+    delete:
+      description: Delete an assessment session by ID
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - assessments
+    get:
+      description: Get a specific assessment session details
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.SessionResponse'
+      tags:
+      - assessments
+    put:
+      consumes:
+      - application/json
+      description: Update an existing assessment session
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated Data
+        in: body
+        name: session
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.CreateSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.SessionResponse'
+      tags:
+      - assessments
   /api/v1/assessments/sessions/{id}/results:
     get:
-      tags:
-        - AssessmentsService
+      description: Get all compliance results for a specific assessment session
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
       responses:
-        '200':
+        "200":
           description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_service.ResultResponse'
+            type: array
+      tags:
+      - assessments
     post:
-      tags:
-        - AssessmentsService
+      consumes:
+      - application/json
+      description: Submit or update a compliance result for a specific regulation
+        item
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Result Data
+        in: body
+        name: result
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.SubmitResultRequest'
+      produces:
+      - application/json
       responses:
-        '200':
+        "200":
           description: OK
-
+          schema:
+            $ref: '#/definitions/internal_service.ResultResponse'
+      tags:
+      - assessments
+  /api/v1/assessments/sessions/{id}/results/{result_id}:
+    delete:
+      description: Delete an assessment result by ID
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Result ID
+        in: path
+        name: result_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - assessments
   /api/v1/assessments/sessions/{id}/summaries:
     get:
-      tags:
-        - AssessmentsService
+      description: Get a summary of assessment results grouped by regulation
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
       responses:
-        '200':
+        "200":
           description: OK
-
-components:
-  schemas:
-    TenantResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        type:
-          type: string
-        status:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-    CreateTenantRequest:
-      type: object
-      required:
-        - name
-        - type
-      properties:
-        name:
-          type: string
-        type:
-          type: string
-        status:
-          type: string
-    UpdateTenantRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        type:
-          type: string
-        status:
-          type: string
-    ListTenantsResponse:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/TenantResponse'
+          schema:
+            items:
+              $ref: '#/definitions/grc_be_internal_biz.RegulationAssessment'
+            type: array
+      tags:
+      - assessments
+  /api/v1/properties:
+    get:
+      description: Get a list of all properties
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_service.PropertyResponse'
+            type: array
+      tags:
+      - properties
+    post:
+      consumes:
+      - application/json
+      description: Create a new property/asset
+      parameters:
+      - description: Property Data
+        in: body
+        name: property
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.CreatePropertyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_service.PropertyResponse'
+      tags:
+      - properties
+  /api/v1/properties/{id}:
+    delete:
+      description: Delete a property by ID
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - properties
+    get:
+      description: Get a specific property details
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.PropertyResponse'
+      tags:
+      - properties
+    put:
+      consumes:
+      - application/json
+      description: Update an existing property
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated Data
+        in: body
+        name: property
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.CreatePropertyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.PropertyResponse'
+      tags:
+      - properties
+  /api/v1/regulations:
+    get:
+      description: Get a list of all regulations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_service.RegulationResponse'
+            type: array
+      tags:
+      - regulations
+    post:
+      consumes:
+      - application/json
+      description: Create a new regulation document
+      parameters:
+      - description: Regulation Data
+        in: body
+        name: regulation
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.CreateRegulationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_service.RegulationResponse'
+      tags:
+      - regulations
+  /api/v1/regulations/{id}:
+    delete:
+      description: Delete a regulation by ID
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - regulations
+    get:
+      description: Get a specific regulation details
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.RegulationResponse'
+      tags:
+      - regulations
+    put:
+      consumes:
+      - application/json
+      description: Update an existing regulation
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated Data
+        in: body
+        name: regulation
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.UpdateRegulationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.RegulationResponse'
+      tags:
+      - regulations
+  /api/v1/regulations/{id}/items:
+    get:
+      description: Get a list of all items (clausul) for a specific regulation
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_service.RegulationItemResponse'
+            type: array
+      tags:
+      - regulations
+    post:
+      consumes:
+      - application/json
+      description: Create a new item (clausul) for a regulation
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item Data
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.CreateRegulationItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_service.RegulationItemResponse'
+      tags:
+      - regulations
+  /api/v1/regulations/{id}/items/{item_id}:
+    delete:
+      description: Delete a regulation item by ID
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - regulations
+    get:
+      description: Get a specific regulation item details
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.RegulationItemResponse'
+      tags:
+      - regulations
+    put:
+      consumes:
+      - application/json
+      description: Update an existing regulation item
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      - description: Updated Data
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.CreateRegulationItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.RegulationItemResponse'
+      tags:
+      - regulations
+  /api/v1/regulations/{id}/mappings:
+    get:
+      description: Get a list of all property mappings for a specific regulation
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/grc_be_internal_biz.RegulationPropertyMapping'
+            type: array
+      tags:
+      - regulations
+    post:
+      consumes:
+      - application/json
+      description: Map a property/asset to a regulation
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Mapping Data
+        in: body
+        name: mapping
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.AddMappingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/grc_be_internal_biz.RegulationPropertyMapping'
+      tags:
+      - regulations
+  /api/v1/regulations/{id}/mappings/{mapping_id}:
+    delete:
+      description: Delete a regulation property mapping by ID
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Mapping ID
+        in: path
+        name: mapping_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - regulations
+  /api/v1/tenants:
+    get:
+      description: Get a list of all tenants
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_service.TenantResponse'
+            type: array
+      tags:
+      - tenants
+    post:
+      consumes:
+      - application/json
+      description: Create a new tenant (BPR/BPRS)
+      parameters:
+      - description: Tenant Data
+        in: body
+        name: tenant
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.CreateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_service.TenantResponse'
+      tags:
+      - tenants
+  /api/v1/tenants/{id}:
+    delete:
+      description: Delete a tenant by ID
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - tenants
+    get:
+      description: Get a specific tenant details
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.TenantResponse'
+      tags:
+      - tenants
+    put:
+      consumes:
+      - application/json
+      description: Update an existing tenant
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated Data
+        in: body
+        name: tenant
+        required: true
+        schema:
+          $ref: '#/definitions/internal_service.UpdateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_service.TenantResponse'
+      tags:
+      - tenants
+swagger: "2.0"
+tags:
+- name: tenants
+- name: properties
+- name: regulations
+- name: assessments

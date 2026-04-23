@@ -44,16 +44,18 @@ type RegulationModel struct {
 	RegulationType string    `gorm:"not null"` // POJK, SEOJK, UU
 	IssuedDate     time.Time
 	Status         string `gorm:"not null;default:'Active'"` // Active, Revoked
+	Category       string `gorm:"not null;default:'External'"`
 }
 
 func (RegulationModel) TableName() string { return "regulations" }
 
 // RegulationItemModel adalah model GORM untuk tabel regulation_items.
 type RegulationItemModel struct {
-	ID              uuid.UUID `gorm:"type:uuid;primaryKey"`
-	RegulationID    uuid.UUID `gorm:"type:uuid;not null;index"`
-	ReferenceNumber string    `gorm:"not null"` // e.g., 'Pasal 1 ayat 1'
-	Content         string    `gorm:"type:text"`
+	ID               uuid.UUID             `gorm:"type:uuid;primaryKey"`
+	RegulationID     uuid.UUID             `gorm:"type:uuid;not null;index"`
+	TenantProperties []TenantPropertyModel `gorm:"many2many:regulation_item_tenant_properties;"`
+	ReferenceNumber  string                `gorm:"not null"` // e.g., 'Pasal 1 ayat 1'
+	Content          string                `gorm:"type:text"`
 }
 
 func (RegulationItemModel) TableName() string { return "regulation_items" }

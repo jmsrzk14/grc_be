@@ -57,6 +57,13 @@ type ResultResponse struct {
 
 // --- Handlers ---
 
+// CreateSession godoc
+// @Tags AssessmentsService
+// @Accept json
+// @Produce json
+// @Param session body CreateSessionRequest true "Session Data"
+// @Success 201 {object} SessionResponse
+// @Router /api/v1/assessments/sessions [post]
 func (s *AssessmentService) CreateSession(w http.ResponseWriter, r *http.Request) {
 	var req CreateSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -81,6 +88,12 @@ func (s *AssessmentService) CreateSession(w http.ResponseWriter, r *http.Request
 	respondJSON(w, http.StatusCreated, toSessionResponse(result))
 }
 
+// GetSession godoc
+// @Tags AssessmentsService
+// @Produce json
+// @Param id path string true "Session ID"
+// @Success 200 {object} SessionResponse
+// @Router /api/v1/assessments/sessions/{id} [get]
 func (s *AssessmentService) GetSession(w http.ResponseWriter, r *http.Request) {
 	id, err := parseUUIDFromRequest(r, "id")
 	if err != nil {
@@ -95,6 +108,14 @@ func (s *AssessmentService) GetSession(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, toSessionResponse(result))
 }
 
+// UpdateSession godoc
+// @Tags AssessmentsService
+// @Accept json
+// @Produce json
+// @Param id path string true "Session ID"
+// @Param session body CreateSessionRequest true "Updated Data"
+// @Success 200 {object} SessionResponse
+// @Router /api/v1/assessments/sessions/{id} [put]
 func (s *AssessmentService) UpdateSession(w http.ResponseWriter, r *http.Request) {
 	id, err := parseUUIDFromRequest(r, "id")
 	if err != nil {
@@ -121,6 +142,11 @@ func (s *AssessmentService) UpdateSession(w http.ResponseWriter, r *http.Request
 	respondJSON(w, http.StatusOK, toSessionResponse(result))
 }
 
+// DeleteSession godoc
+// @Tags AssessmentsService
+// @Param id path string true "Session ID"
+// @Success 200 {object} map[string]string
+// @Router /api/v1/assessments/sessions/{id} [delete]
 func (s *AssessmentService) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	id, err := parseUUIDFromRequest(r, "id")
 	if err != nil {
@@ -134,6 +160,12 @@ func (s *AssessmentService) DeleteSession(w http.ResponseWriter, r *http.Request
 	respondJSON(w, http.StatusOK, map[string]string{"message": "session deleted"})
 }
 
+// ListSessions godoc
+// @Tags AssessmentsService
+// @Produce json
+// @Param tenant_id query string false "Tenant ID Filter"
+// @Success 200 {array} SessionResponse
+// @Router /api/v1/assessments/sessions [get]
 func (s *AssessmentService) ListSessions(w http.ResponseWriter, r *http.Request) {
 	var tenantID *uuid.UUID
 	tIDStr := r.URL.Query().Get("tenant_id")
@@ -155,6 +187,14 @@ func (s *AssessmentService) ListSessions(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusOK, resp)
 }
 
+// SubmitResult godoc
+// @Tags AssessmentsService
+// @Accept json
+// @Produce json
+// @Param id path string true "Session ID"
+// @Param result body SubmitResultRequest true "Result Data"
+// @Success 200 {object} ResultResponse
+// @Router /api/v1/assessments/sessions/{id}/results [post]
 func (s *AssessmentService) SubmitResult(w http.ResponseWriter, r *http.Request) {
 	sessionID, err := parseUUIDFromRequest(r, "id")
 	if err != nil {
@@ -186,6 +226,12 @@ func (s *AssessmentService) SubmitResult(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusOK, toResultResponse(saved))
 }
 
+// DeleteResult godoc
+// @Tags AssessmentsService
+// @Param id path string true "Session ID"
+// @Param result_id path string true "Result ID"
+// @Success 200 {object} map[string]string
+// @Router /api/v1/assessments/sessions/{id}/results/{result_id} [delete]
 func (s *AssessmentService) DeleteResult(w http.ResponseWriter, r *http.Request) {
 	id, err := parseUUIDFromRequest(r, "result_id")
 	if err != nil {
@@ -199,6 +245,12 @@ func (s *AssessmentService) DeleteResult(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusOK, map[string]string{"message": "result deleted"})
 }
 
+// ListResults godoc
+// @Tags AssessmentsService
+// @Produce json
+// @Param id path string true "Session ID"
+// @Success 200 {array} ResultResponse
+// @Router /api/v1/assessments/sessions/{id}/results [get]
 func (s *AssessmentService) ListResults(w http.ResponseWriter, r *http.Request) {
 	sessionID, err := parseUUIDFromRequest(r, "id")
 	if err != nil {
@@ -217,6 +269,12 @@ func (s *AssessmentService) ListResults(w http.ResponseWriter, r *http.Request) 
 	respondJSON(w, http.StatusOK, resp)
 }
 
+// GetSummaries godoc
+// @Tags AssessmentsService
+// @Produce json
+// @Param id path string true "Session ID"
+// @Success 200 {array} biz.RegulationAssessment
+// @Router /api/v1/assessments/sessions/{id}/summaries [get]
 func (s *AssessmentService) GetSummaries(w http.ResponseWriter, r *http.Request) {
 	sessionID, err := parseUUIDFromRequest(r, "id")
 	if err != nil {

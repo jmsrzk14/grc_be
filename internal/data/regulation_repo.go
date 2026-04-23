@@ -30,6 +30,7 @@ func (r *regulationRepo) Create(ctx context.Context, reg *biz.Regulation) (*biz.
 		RegulationType: reg.RegulationType,
 		IssuedDate:     reg.IssuedDate,
 		Status:         reg.Status,
+		Category:       reg.Category,
 	}
 	if result := r.data.db.WithContext(ctx).Create(m); result.Error != nil {
 		return nil, result.Error
@@ -38,24 +39,64 @@ func (r *regulationRepo) Create(ctx context.Context, reg *biz.Regulation) (*biz.
 }
 
 func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.Regulation, error) {
-	var m RegulationModel
-	if result := r.data.db.WithContext(ctx).First(&m, "id = ?", id); result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	type resultWithStats struct {
+		RegulationModel
+		AmountPass int
+		AmountFail int
+		AmountNA   int
+	}
+	var res resultWithStats
+	err := r.data.db.WithContext(ctx).Table("regulations").
+		Select("regulations.*, COALESCE(SUM(ra.amount_pass), 0) as amount_pass, COALESCE(SUM(ra.amount_fail), 0) as amount_fail, COALESCE(SUM(ra.amount_na), 0) as amount_na").
+		Joins("LEFT JOIN regulation_assesments ra ON regulations.id = ra.regulation_id").
+		Where("regulations.id = ?", id).
+		Group("regulations.id").
+		Scan(&res).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, biz.ErrNotFound
 		}
-		return nil, result.Error
+		return nil, err
 	}
-	return toRegulationDomain(&m), nil
+	// GORM Scan might not return ErrRecordNotFound with Group/Select
+	if res.ID == uuid.Nil {
+		return nil, biz.ErrNotFound
+	}
+
+	reg := toRegulationDomain(&res.RegulationModel)
+	reg.AmountPass = res.AmountPass
+	reg.AmountFail = res.AmountFail
+	reg.AmountNA = res.AmountNA
+	return reg, nil
 }
 
 func (r *regulationRepo) FindAll(ctx context.Context) ([]*biz.Regulation, error) {
-	var models []*RegulationModel
-	if result := r.data.db.WithContext(ctx).Find(&models); result.Error != nil {
-		return nil, result.Error
+	type resultWithStats struct {
+		RegulationModel
+		AmountPass int
+		AmountFail int
+		AmountNA   int
 	}
-	regs := make([]*biz.Regulation, 0, len(models))
-	for _, m := range models {
-		regs = append(regs, toRegulationDomain(m))
+	var results []*resultWithStats
+
+	err := r.data.db.WithContext(ctx).Table("regulations").
+		Select("regulations.*, COALESCE(SUM(ra.amount_pass), 0) as amount_pass, COALESCE(SUM(ra.amount_fail), 0) as amount_fail, COALESCE(SUM(ra.amount_na), 0) as amount_na").
+		Joins("LEFT JOIN regulation_assesments ra ON regulations.id = ra.regulation_id").
+		Group("regulations.id").
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	regs := make([]*biz.Regulation, 0, len(results))
+	for _, res := range results {
+		reg := toRegulationDomain(&res.RegulationModel)
+		reg.AmountPass = res.AmountPass
+		reg.AmountFail = res.AmountFail
+		reg.AmountNA = res.AmountNA
+		regs = append(regs, reg)
 	}
 	return regs, nil
 }
@@ -67,6 +108,7 @@ func (r *regulationRepo) Update(ctx context.Context, reg *biz.Regulation) (*biz.
 		RegulationType: reg.RegulationType,
 		IssuedDate:     reg.IssuedDate,
 		Status:         reg.Status,
+		Category:       reg.Category,
 	}
 	if result := r.data.db.WithContext(ctx).Save(m); result.Error != nil {
 		return nil, result.Error
@@ -85,6 +127,7 @@ func toRegulationDomain(m *RegulationModel) *biz.Regulation {
 		RegulationType: m.RegulationType,
 		IssuedDate:     m.IssuedDate,
 		Status:         m.Status,
+		Category:       m.Category,
 	}
 }
 
@@ -101,11 +144,16 @@ func NewRegulationItemRepo(data *Data, logger log.Logger) biz.RegulationItemRepo
 }
 
 func (r *regulationItemRepo) Create(ctx context.Context, item *biz.RegulationItem) (*biz.RegulationItem, error) {
+	tenantProps := make([]TenantPropertyModel, 0, len(item.TenantPropertyIDs))
+	for _, id := range item.TenantPropertyIDs {
+		tenantProps = append(tenantProps, TenantPropertyModel{ID: id})
+	}
 	m := &RegulationItemModel{
-		ID:              item.ID,
-		RegulationID:    item.RegulationID,
-		ReferenceNumber: item.ReferenceNumber,
-		Content:         item.Content,
+		ID:               item.ID,
+		RegulationID:     item.RegulationID,
+		TenantProperties: tenantProps,
+		ReferenceNumber:  item.ReferenceNumber,
+		Content:          item.Content,
 	}
 	if result := r.data.db.WithContext(ctx).Create(m); result.Error != nil {
 		return nil, result.Error
@@ -115,7 +163,7 @@ func (r *regulationItemRepo) Create(ctx context.Context, item *biz.RegulationIte
 
 func (r *regulationItemRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.RegulationItem, error) {
 	var m RegulationItemModel
-	if result := r.data.db.WithContext(ctx).First(&m, "id = ?", id); result.Error != nil {
+	if result := r.data.db.WithContext(ctx).Preload("TenantProperties").First(&m, "id = ?", id); result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, biz.ErrNotFound
 		}
@@ -126,7 +174,7 @@ func (r *regulationItemRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.R
 
 func (r *regulationItemRepo) FindByRegulationID(ctx context.Context, regulationID uuid.UUID) ([]*biz.RegulationItem, error) {
 	var models []*RegulationItemModel
-	if result := r.data.db.WithContext(ctx).Find(&models, "regulation_id = ?", regulationID); result.Error != nil {
+	if result := r.data.db.WithContext(ctx).Preload("TenantProperties").Order("reference_number ASC").Find(&models, "regulation_id = ?", regulationID); result.Error != nil {
 		return nil, result.Error
 	}
 	items := make([]*biz.RegulationItem, 0, len(models))
@@ -137,14 +185,26 @@ func (r *regulationItemRepo) FindByRegulationID(ctx context.Context, regulationI
 }
 
 func (r *regulationItemRepo) Update(ctx context.Context, item *biz.RegulationItem) (*biz.RegulationItem, error) {
-	m := &RegulationItemModel{
-		ID:              item.ID,
-		RegulationID:    item.RegulationID,
-		ReferenceNumber: item.ReferenceNumber,
-		Content:         item.Content,
+	tenantProps := make([]TenantPropertyModel, 0, len(item.TenantPropertyIDs))
+	for _, id := range item.TenantPropertyIDs {
+		tenantProps = append(tenantProps, TenantPropertyModel{ID: id})
 	}
-	if result := r.data.db.WithContext(ctx).Save(m); result.Error != nil {
-		return nil, result.Error
+	m := &RegulationItemModel{
+		ID:               item.ID,
+		RegulationID:     item.RegulationID,
+		ReferenceNumber:  item.ReferenceNumber,
+		Content:          item.Content,
+	}
+
+	err := r.data.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(m).Error; err != nil {
+			return err
+		}
+		return tx.Model(m).Association("TenantProperties").Replace(tenantProps)
+	})
+
+	if err != nil {
+		return nil, err
 	}
 	return toRegulationItemDomain(m), nil
 }
@@ -154,11 +214,16 @@ func (r *regulationItemRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func toRegulationItemDomain(m *RegulationItemModel) *biz.RegulationItem {
+	ids := make([]uuid.UUID, 0, len(m.TenantProperties))
+	for _, tp := range m.TenantProperties {
+		ids = append(ids, tp.ID)
+	}
 	return &biz.RegulationItem{
-		ID:              m.ID,
-		RegulationID:    m.RegulationID,
-		ReferenceNumber: m.ReferenceNumber,
-		Content:         m.Content,
+		ID:                m.ID,
+		RegulationID:      m.RegulationID,
+		TenantPropertyIDs: ids,
+		ReferenceNumber:   m.ReferenceNumber,
+		Content:           m.Content,
 	}
 }
 

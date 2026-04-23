@@ -174,8 +174,12 @@ func (r *assessmentResultRepo) Upsert(ctx context.Context, result *biz.Assessmen
 	if res.Error != nil {
 		return nil, res.Error
 	}
-	result.UpdatedAt = m.UpdatedAt
-	return result, nil
+
+	// Ambil data terbaru dari DB untuk memastikan ID dan field lainnya sinkron
+	var latest AssessmentResultModel
+	r.data.db.WithContext(ctx).First(&latest, "session_id = ? AND regulation_item_id = ?", result.SessionID, result.RegulationItemID)
+	
+	return toResultDomain(&latest), nil
 }
 
 func (r *assessmentResultRepo) Delete(ctx context.Context, id uuid.UUID) error {
@@ -295,6 +299,7 @@ func (r *regulationAssessmentRepo) RecalculateForSession(ctx context.Context, se
 
 	// Upsert regulation assessment summary:
 	m := &RegulationAssessmentModel{
+		ID:           uuid.New(), 
 		RegulationID: regulationID,
 		SessionID:    sessionID,
 		AmountPass:   ra.AmountPass,

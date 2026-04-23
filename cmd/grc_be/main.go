@@ -1,3 +1,15 @@
+// @title GRC API
+// @version 1.0
+// @description API documentation for Governance, Risk, and Compliance system.
+
+// @tag.name TenantsService
+
+// @tag.name PropertiesService
+
+// @tag.name RegulationsService
+
+// @tag.name AssessmentsService
+
 package main
 
 import (
@@ -63,7 +75,7 @@ func main() {
 
 	// Railway dynamic port override
 	if port := os.Getenv("PORT"); port != "" {
-		bc.Server.Http.Addr = ":" + port
+		bc.Server.HTTP.Addr = ":" + port
 	}
 
 	// Manual Dependency Injection (tanpa Wire agar cepat)
@@ -75,7 +87,7 @@ func main() {
 
 	tenantRepo := data.NewTenantRepo(d, logger)
 	propertyRepo := data.NewPropertyRepo(d, logger)
-	// tpRepo := data.NewTenantPropertyRepo(d, logger) // Optional for now
+	tpRepo := data.NewTenantPropertyRepo(d, logger)
 	regRepo := data.NewRegulationRepo(d, logger)
 	itemRepo := data.NewRegulationItemRepo(d, logger)
 	mappingRepo := data.NewRegulationPropertyMappingRepo(d, logger)
@@ -84,11 +96,11 @@ func main() {
 	raRepo := data.NewRegulationAssessmentRepo(d, logger)
 
 	tenantUC := biz.NewTenantUseCase(tenantRepo, logger)
-	propertyUC := biz.NewPropertyUseCase(propertyRepo, logger)
+	propertyUC := biz.NewPropertyUseCase(propertyRepo, tpRepo, logger)
 	regUC := biz.NewRegulationUseCase(regRepo, itemRepo, mappingRepo, logger)
 	assUC := biz.NewAssessmentUseCase(sessionRepo, resultRepo, raRepo, itemRepo, logger)
 
-	tenantSvc := service.NewTenantService(tenantUC, logger)
+	tenantSvc := service.NewTenantService(tenantUC, propertyUC, logger)
 	propSvc := service.NewPropertyService(propertyUC, logger)
 	regSvc := service.NewRegulationService(regUC, logger)
 	assSvc := service.NewAssessmentService(assUC, logger)

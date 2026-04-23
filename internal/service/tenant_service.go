@@ -14,12 +14,13 @@ import (
 // TenantService handles HTTP requests untuk Tenant.
 type TenantService struct {
 	uc  *biz.TenantUseCase
+	puc *biz.PropertyUseCase
 	log *log.Helper
 }
 
 // NewTenantService membuat instance TenantService.
-func NewTenantService(uc *biz.TenantUseCase, logger log.Logger) *TenantService {
-	return &TenantService{uc: uc, log: log.NewHelper(logger)}
+func NewTenantService(uc *biz.TenantUseCase, puc *biz.PropertyUseCase, logger log.Logger) *TenantService {
+	return &TenantService{uc: uc, puc: puc, log: log.NewHelper(logger)}
 }
 
 // --- Request/Response DTOs ---
@@ -47,9 +48,7 @@ type UpdateTenantRequest struct {
 // --- Handlers ---
 
 // CreateTenant godoc
-// @Summary Create a new tenant
-// @Description Create a new tenant (BPR/BPRS)
-// @Tags tenants
+// @Tags TenantsService
 // @Accept json
 // @Produce json
 // @Param tenant body CreateTenantRequest true "Tenant Data"
@@ -80,9 +79,7 @@ func (s *TenantService) CreateTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetTenant godoc
-// @Summary Get tenant by ID
-// @Description Get a specific tenant details
-// @Tags tenants
+// @Tags TenantsService
 // @Produce json
 // @Param id path string true "Tenant ID"
 // @Success 200 {object} TenantResponse
@@ -106,9 +103,7 @@ func (s *TenantService) GetTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListTenants godoc
-// @Summary List all tenants
-// @Description Get a list of all tenants
-// @Tags tenants
+// @Tags TenantsService
 // @Produce json
 // @Success 200 {array} TenantResponse
 // @Router /api/v1/tenants [get]
@@ -126,9 +121,7 @@ func (s *TenantService) ListTenants(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateTenant godoc
-// @Summary Update tenant
-// @Description Update an existing tenant
-// @Tags tenants
+// @Tags TenantsService
 // @Accept json
 // @Produce json
 // @Param id path string true "Tenant ID"
@@ -156,9 +149,7 @@ func (s *TenantService) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteTenant godoc
-// @Summary Delete tenant
-// @Description Delete a tenant by ID
-// @Tags tenants
+// @Tags TenantsService
 // @Param id path string true "Tenant ID"
 // @Success 200 {object} map[string]string
 // @Router /api/v1/tenants/{id} [delete]
@@ -173,6 +164,42 @@ func (s *TenantService) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]string{"message": "tenant deleted"})
+}
+
+type TenantPropertyResponse struct {
+	ID         string `json:"id"`
+	TenantID   string `json:"tenant_id"`
+	PropertyID string `json:"property_id"`
+}
+
+// ListTenantProperties godoc
+// @Tags TenantsService
+// @Produce json
+// @Param id path string true "Tenant ID"
+// @Success 200 {array} TenantPropertyResponse
+// @Router /api/v1/tenants/{id}/properties [get]
+func (s *TenantService) ListTenantProperties(w http.ResponseWriter, r *http.Request) {
+	tenantID, err := parseUUIDFromRequest(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid tenant id")
+		return
+	}
+	
+	tps, err := s.puc.ListTenantProperties(r.Context(), tenantID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resp := make([]*TenantPropertyResponse, 0, len(tps))
+	for _, tp := range tps {
+		resp = append(resp, &TenantPropertyResponse{
+			ID:         tp.ID.String(),
+			TenantID:   tp.TenantID.String(),
+			PropertyID: tp.PropertyID.String(),
+		})
+	}
+	respondJSON(w, http.StatusOK, resp)
 }
 
 func toTenantResponse(t *biz.Tenant) *TenantResponse {
@@ -210,7 +237,12 @@ type PropertyResponse struct {
 }
 
 // CreateProperty godoc
-// POST /api/v1/properties
+// @Tags PropertiesService
+// @Accept json
+// @Produce json
+// @Param property body CreatePropertyRequest true "Property Data"
+// @Success 201 {object} PropertyResponse
+// @Router /api/v1/properties [post]
 func (s *PropertyService) CreateProperty(w http.ResponseWriter, r *http.Request) {
 	var req CreatePropertyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -226,7 +258,11 @@ func (s *PropertyService) CreateProperty(w http.ResponseWriter, r *http.Request)
 }
 
 // GetProperty godoc
-// GET /api/v1/properties/{id}
+// @Tags PropertiesService
+// @Produce json
+// @Param id path string true "Property ID"
+// @Success 200 {object} PropertyResponse
+// @Router /api/v1/properties/{id} [get]
 func (s *PropertyService) GetProperty(w http.ResponseWriter, r *http.Request) {
 	id, err := parseUUIDFromRequest(r, "id")
 	if err != nil {
@@ -246,7 +282,10 @@ func (s *PropertyService) GetProperty(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListProperties godoc
-// GET /api/v1/properties
+// @Tags PropertiesService
+// @Produce json
+// @Success 200 {array} PropertyResponse
+// @Router /api/v1/properties [get]
 func (s *PropertyService) ListProperties(w http.ResponseWriter, r *http.Request) {
 	props, err := s.uc.ListProperties(r.Context())
 	if err != nil {
@@ -261,7 +300,13 @@ func (s *PropertyService) ListProperties(w http.ResponseWriter, r *http.Request)
 }
 
 // UpdateProperty godoc
-// PUT /api/v1/properties/{id}
+// @Tags PropertiesService
+// @Accept json
+// @Produce json
+// @Param id path string true "Property ID"
+// @Param property body CreatePropertyRequest true "Updated Data"
+// @Success 200 {object} PropertyResponse
+// @Router /api/v1/properties/{id} [put]
 func (s *PropertyService) UpdateProperty(w http.ResponseWriter, r *http.Request) {
 	id, err := parseUUIDFromRequest(r, "id")
 	if err != nil {
@@ -282,7 +327,10 @@ func (s *PropertyService) UpdateProperty(w http.ResponseWriter, r *http.Request)
 }
 
 // DeleteProperty godoc
-// DELETE /api/v1/properties/{id}
+// @Tags PropertiesService
+// @Param id path string true "Property ID"
+// @Success 200 {object} map[string]string
+// @Router /api/v1/properties/{id} [delete]
 func (s *PropertyService) DeleteProperty(w http.ResponseWriter, r *http.Request) {
 	id, err := parseUUIDFromRequest(r, "id")
 	if err != nil {

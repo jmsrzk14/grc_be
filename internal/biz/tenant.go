@@ -59,19 +59,18 @@ func (uc *TenantUseCase) DeleteTenant(ctx context.Context, id uuid.UUID) error {
 	return uc.repo.Delete(ctx, id)
 }
 
-// --- PropertyUseCase ---
-
-// PropertyUseCase menangani logika bisnis untuk Property.
 type PropertyUseCase struct {
 	repo TenantRepo
 	pr   PropertyRepo
+	tp   TenantPropertyRepo
 	log  *log.Helper
 }
 
 // NewPropertyUseCase membuat instance baru.
-func NewPropertyUseCase(pr PropertyRepo, logger log.Logger) *PropertyUseCase {
+func NewPropertyUseCase(pr PropertyRepo, tp TenantPropertyRepo, logger log.Logger) *PropertyUseCase {
 	return &PropertyUseCase{
 		pr:  pr,
+		tp:  tp,
 		log: log.NewHelper(logger),
 	}
 }
@@ -103,4 +102,9 @@ func (uc *PropertyUseCase) UpdateProperty(ctx context.Context, p *Property) (*Pr
 // DeleteProperty menghapus property berdasarkan ID.
 func (uc *PropertyUseCase) DeleteProperty(ctx context.Context, id uuid.UUID) error {
 	return uc.pr.Delete(ctx, id)
+}
+
+// ListTenantProperties mengembalikan mapping property untuk tenant tertentu.
+func (uc *PropertyUseCase) ListTenantProperties(ctx context.Context, tenantID uuid.UUID) ([]*TenantProperty, error) {
+	return uc.tp.FindByTenantID(ctx, tenantID)
 }

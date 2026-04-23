@@ -15,16 +15,851 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/tenants": {
+        "/api/v1/assessments/sessions": {
             "get": {
-                "description": "Get a list of all tenants",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "tenants"
+                    "AssessmentsService"
                 ],
-                "summary": "List all tenants",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant ID Filter",
+                        "name": "tenant_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/service.SessionResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "description": "Session Data",
+                        "name": "session",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CreateSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/service.SessionResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/assessments/sessions/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.SessionResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated Data",
+                        "name": "session",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CreateSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.SessionResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/assessments/sessions/{id}/results": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/service.ResultResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Result Data",
+                        "name": "result",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.SubmitResultRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.ResultResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/assessments/sessions/{id}/results/{result_id}": {
+            "delete": {
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Result ID",
+                        "name": "result_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/assessments/sessions/{id}/summaries": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/biz.RegulationAssessment"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/properties": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "PropertiesService"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/service.PropertyResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "PropertiesService"
+                ],
+                "parameters": [
+                    {
+                        "description": "Property Data",
+                        "name": "property",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CreatePropertyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/service.PropertyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/properties/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "PropertiesService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Property ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.PropertyResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "PropertiesService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Property ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated Data",
+                        "name": "property",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CreatePropertyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.PropertyResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "PropertiesService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Property ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/regulations": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/service.RegulationResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "description": "Regulation Data",
+                        "name": "regulation",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CreateRegulationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/service.RegulationResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/regulations/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.RegulationResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated Data",
+                        "name": "regulation",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.UpdateRegulationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.RegulationResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/regulations/{id}/items": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/service.RegulationItemResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Item Data",
+                        "name": "item",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CreateRegulationItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/service.RegulationItemResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/regulations/{id}/items/{item_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Item ID",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.RegulationItemResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Item ID",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated Data",
+                        "name": "item",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CreateRegulationItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.RegulationItemResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Item ID",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/regulations/{id}/mappings": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/biz.RegulationPropertyMapping"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Mapping Data",
+                        "name": "mapping",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.AddMappingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/biz.RegulationPropertyMapping"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/regulations/{id}/mappings/{mapping_id}": {
+            "delete": {
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Mapping ID",
+                        "name": "mapping_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tenants": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TenantsService"
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -38,7 +873,6 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Create a new tenant (BPR/BPRS)",
                 "consumes": [
                     "application/json"
                 ],
@@ -46,9 +880,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "tenants"
+                    "TenantsService"
                 ],
-                "summary": "Create a new tenant",
                 "parameters": [
                     {
                         "description": "Tenant Data",
@@ -72,14 +905,12 @@ const docTemplate = `{
         },
         "/api/v1/tenants/{id}": {
             "get": {
-                "description": "Get a specific tenant details",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "tenants"
+                    "TenantsService"
                 ],
-                "summary": "Get tenant by ID",
                 "parameters": [
                     {
                         "type": "string",
@@ -99,7 +930,6 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Update an existing tenant",
                 "consumes": [
                     "application/json"
                 ],
@@ -107,9 +937,8 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "tenants"
+                    "TenantsService"
                 ],
-                "summary": "Update tenant",
                 "parameters": [
                     {
                         "type": "string",
@@ -138,11 +967,9 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Delete a tenant by ID",
                 "tags": [
-                    "tenants"
+                    "TenantsService"
                 ],
-                "summary": "Delete tenant",
                 "parameters": [
                     {
                         "type": "string",
@@ -167,6 +994,107 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "biz.RegulationAssessment": {
+            "type": "object",
+            "properties": {
+                "amountFail": {
+                    "type": "integer"
+                },
+                "amountNA": {
+                    "type": "integer"
+                },
+                "amountPass": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "regulationID": {
+                    "type": "string"
+                },
+                "sessionID": {
+                    "type": "string"
+                }
+            }
+        },
+        "biz.RegulationPropertyMapping": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "propertyID": {
+                    "type": "string"
+                },
+                "regulationID": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.AddMappingRequest": {
+            "type": "object",
+            "properties": {
+                "property_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CreatePropertyRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CreateRegulationItemRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "reference_number": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CreateRegulationRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "issued_date": {
+                    "type": "string"
+                },
+                "regulation_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CreateSessionRequest": {
+            "type": "object",
+            "properties": {
+                "period_year": {
+                    "type": "integer"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "service.CreateTenantRequest": {
             "type": "object",
             "properties": {
@@ -177,6 +1105,135 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.PropertyResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.RegulationItemResponse": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reference_number": {
+                    "type": "string"
+                },
+                "regulation_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.RegulationResponse": {
+            "type": "object",
+            "properties": {
+                "amount_fail": {
+                    "type": "integer"
+                },
+                "amount_na": {
+                    "type": "integer"
+                },
+                "amount_pass": {
+                    "type": "integer"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "issued_date": {
+                    "type": "string"
+                },
+                "regulation_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.ResultResponse": {
+            "type": "object",
+            "properties": {
+                "compliance_status": {
+                    "type": "string"
+                },
+                "evidence_link": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "regulation_item_id": {
+                    "type": "string"
+                },
+                "remarks": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.SessionResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "period_year": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.SubmitResultRequest": {
+            "type": "object",
+            "properties": {
+                "compliance_status": {
+                    "type": "string"
+                },
+                "evidence_link": {
+                    "type": "string"
+                },
+                "regulation_item_id": {
+                    "type": "string"
+                },
+                "remarks": {
                     "type": "string"
                 }
             }
@@ -201,6 +1258,26 @@ const docTemplate = `{
                 }
             }
         },
+        "service.UpdateRegulationRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "issued_date": {
+                    "type": "string"
+                },
+                "regulation_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "service.UpdateTenantRequest": {
             "type": "object",
             "properties": {
@@ -215,17 +1292,31 @@ const docTemplate = `{
                 }
             }
         }
-    }
+    },
+    "tags": [
+        {
+            "name": "TenantsService"
+        },
+        {
+            "name": "PropertiesService"
+        },
+        {
+            "name": "RegulationsService"
+        },
+        {
+            "name": "AssessmentsService"
+        }
+    ]
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8000",
-	BasePath:         "/",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "GRC Backend API",
-	Description:      "Governance, Risk, and Compliance (GRC) Backend System.",
+	Title:            "GRC API",
+	Description:      "API documentation for Governance, Risk, and Compliance system.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

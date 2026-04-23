@@ -36,6 +36,7 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	t.HandleFunc("/{id}", tenant.GetTenant).Methods("GET")
 	t.HandleFunc("/{id}", tenant.UpdateTenant).Methods("PUT")
 	t.HandleFunc("/{id}", tenant.DeleteTenant).Methods("DELETE")
+	t.HandleFunc("/{id}/properties", tenant.ListTenantProperties).Methods("GET")
 
 	// Property API
 	p := router.PathPrefix("/api/v1/properties").Subrouter()
@@ -74,12 +75,12 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	a.HandleFunc("/sessions/{id}/summaries", ass.GetSummaries).Methods("GET")
 
 	// Swagger UI & OpenAPI Spec
-	router.HandleFunc("/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./api/docs/openapi.yaml")
+	router.HandleFunc("/swagger.json", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./api/docs/swagger.json")
 	})
 	
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("/openapi.yaml"), // Point to our OpenAPI 3.0 spec
+		httpSwagger.URL("/swagger.json"), 
 	))
 
 	// CORS configuration
