@@ -15,7 +15,7 @@ import (
 )
 
 // NewHTTPServer create a HTTP server.
-func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *service.PropertyService, reg *service.RegulationService, ass *service.AssessmentService, logger log.Logger) *khttp.Server {
+func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *service.PropertyService, reg *service.RegulationService, ass *service.AssessmentService, auth *service.AuthService, logger log.Logger) *khttp.Server {
 	var opts = []khttp.ServerOption{
 		khttp.Middleware(
 			recovery.Recovery(),
@@ -28,6 +28,11 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	
 	// Gunakan gorilla mux untuk routing REST yang fleksibel
 	router := mux.NewRouter()
+
+	// Auth API
+	aAuth := router.PathPrefix("/api/v1/auth").Subrouter()
+	aAuth.HandleFunc("/login", auth.Login).Methods("POST")
+	aAuth.HandleFunc("/register", auth.Register).Methods("POST")
 	
 	// Tenant API
 	t := router.PathPrefix("/api/v1/tenants").Subrouter()

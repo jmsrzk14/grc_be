@@ -94,3 +94,16 @@ type RegulationAssessment struct {
 	AmountFail   int
 	AmountNA     int
 }
+
+// User merepresentasikan pengguna sistem.
+type User struct {
+	ID        uuid.UUID
+	Username  string
+	Password  string
+	Email     string
+	FullName  string
+	TenantID  uuid.UUID
+	Role      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}

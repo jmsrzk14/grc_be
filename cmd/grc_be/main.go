@@ -94,18 +94,21 @@ func main() {
 	sessionRepo := data.NewAssessmentSessionRepo(d, logger)
 	resultRepo := data.NewAssessmentResultRepo(d, logger)
 	raRepo := data.NewRegulationAssessmentRepo(d, logger)
+	authRepo := data.NewAuthRepo(d, logger)
 
 	tenantUC := biz.NewTenantUseCase(tenantRepo, logger)
 	propertyUC := biz.NewPropertyUseCase(propertyRepo, tpRepo, logger)
 	regUC := biz.NewRegulationUseCase(regRepo, itemRepo, mappingRepo, logger)
 	assUC := biz.NewAssessmentUseCase(sessionRepo, resultRepo, raRepo, itemRepo, logger)
+	authUC := biz.NewAuthUseCase(authRepo, logger)
 
 	tenantSvc := service.NewTenantService(tenantUC, propertyUC, logger)
 	propSvc := service.NewPropertyService(propertyUC, logger)
 	regSvc := service.NewRegulationService(regUC, logger)
 	assSvc := service.NewAssessmentService(assUC, logger)
+	authSvc := service.NewAuthService(authUC, logger)
 
-	httpSrv := server.NewHTTPServer(bc.Server, tenantSvc, propSvc, regSvc, assSvc, logger)
+	httpSrv := server.NewHTTPServer(bc.Server, tenantSvc, propSvc, regSvc, assSvc, authSvc, logger)
 
 	app := newApp(logger, httpSrv)
 

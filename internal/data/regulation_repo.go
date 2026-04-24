@@ -144,19 +144,30 @@ func NewRegulationItemRepo(data *Data, logger log.Logger) biz.RegulationItemRepo
 }
 
 func (r *regulationItemRepo) Create(ctx context.Context, item *biz.RegulationItem) (*biz.RegulationItem, error) {
-	tenantProps := make([]TenantPropertyModel, 0, len(item.TenantPropertyIDs))
-	for _, id := range item.TenantPropertyIDs {
-		tenantProps = append(tenantProps, TenantPropertyModel{ID: id})
-	}
 	m := &RegulationItemModel{
-		ID:               item.ID,
-		RegulationID:     item.RegulationID,
-		TenantProperties: tenantProps,
-		ReferenceNumber:  item.ReferenceNumber,
-		Content:          item.Content,
+		ID:              item.ID,
+		RegulationID:    item.RegulationID,
+		ReferenceNumber: item.ReferenceNumber,
+		Content:         item.Content,
 	}
-	if result := r.data.db.WithContext(ctx).Create(m); result.Error != nil {
-		return nil, result.Error
+
+	err := r.data.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(m).Error; err != nil {
+			return err
+		}
+
+		if len(item.TenantPropertyIDs) > 0 {
+			tenantProps := make([]TenantPropertyModel, 0, len(item.TenantPropertyIDs))
+			for _, id := range item.TenantPropertyIDs {
+				tenantProps = append(tenantProps, TenantPropertyModel{ID: id})
+			}
+			return tx.Model(m).Association("TenantProperties").Append(tenantProps)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 	return item, nil
 }

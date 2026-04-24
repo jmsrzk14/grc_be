@@ -53,7 +53,7 @@ func (RegulationModel) TableName() string { return "regulations" }
 type RegulationItemModel struct {
 	ID               uuid.UUID             `gorm:"type:uuid;primaryKey"`
 	RegulationID     uuid.UUID             `gorm:"type:uuid;not null;index"`
-	TenantProperties []TenantPropertyModel `gorm:"many2many:regulation_item_tenant_properties;"`
+	TenantProperties []TenantPropertyModel `gorm:"many2many:regulation_item_tenant_properties;foreignKey:ID;joinForeignKey:regulation_item_model_id;References:ID;joinReferences:tenant_property_model_id"`
 	ReferenceNumber  string                `gorm:"not null"` // e.g., 'Pasal 1 ayat 1'
 	Content          string                `gorm:"type:text"`
 }
@@ -104,5 +104,18 @@ type RegulationAssessmentModel struct {
 	AmountNA     int       `gorm:"default:0"`
 }
 
-func (RegulationAssessmentModel) TableName() string { return "regulation_assesments" }
+// UserModel adalah model GORM untuk tabel users.
+type UserModel struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Username  string    `gorm:"not null;uniqueIndex"`
+	Password  string    `gorm:"not null"`
+	Email     string    `gorm:"not null;uniqueIndex"`
+	FullName  string    `gorm:"not null"`
+	TenantID  uuid.UUID `gorm:"type:uuid;not null;index"`
+	Role      string    `gorm:"not null;default:'User'"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (UserModel) TableName() string { return "users" }
 
