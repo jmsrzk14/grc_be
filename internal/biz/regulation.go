@@ -41,13 +41,13 @@ func (uc *RegulationUseCase) CreateRegulation(ctx context.Context, r *Regulation
 }
 
 // GetRegulation mengambil regulasi berdasarkan ID.
-func (uc *RegulationUseCase) GetRegulation(ctx context.Context, id uuid.UUID) (*Regulation, error) {
-	return uc.repo.FindByID(ctx, id)
+func (uc *RegulationUseCase) GetRegulation(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*Regulation, error) {
+	return uc.repo.FindByID(ctx, id, tenantID)
 }
 
 // ListRegulations mengembalikan semua regulasi.
-func (uc *RegulationUseCase) ListRegulations(ctx context.Context) ([]*Regulation, error) {
-	return uc.repo.FindAll(ctx)
+func (uc *RegulationUseCase) ListRegulations(ctx context.Context, tenantID uuid.UUID) ([]*Regulation, error) {
+	return uc.repo.FindAll(ctx, tenantID)
 }
 
 // UpdateRegulation memperbarui data regulasi.
@@ -76,9 +76,9 @@ func (uc *RegulationUseCase) GetRegulationItem(ctx context.Context, id uuid.UUID
 	return uc.itemRepo.FindByID(ctx, id)
 }
 
-// ListRegulationItems mengembalikan semua item dalam satu regulasi.
-func (uc *RegulationUseCase) ListRegulationItems(ctx context.Context, regulationID uuid.UUID) ([]*RegulationItem, error) {
-	return uc.itemRepo.FindByRegulationID(ctx, regulationID)
+// ListRegulationItems mengembalikan semua item dalam satu regulasi, opsional difilter berdasarkan tenant.
+func (uc *RegulationUseCase) ListRegulationItems(ctx context.Context, regulationID uuid.UUID, tenantID uuid.UUID) ([]*RegulationItem, error) {
+	return uc.itemRepo.FindByRegulationID(ctx, regulationID, tenantID)
 }
 
 // UpdateRegulationItem memperbarui item regulasi.

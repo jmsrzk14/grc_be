@@ -53,7 +53,11 @@ func (r *assessmentSessionRepo) FindByID(ctx context.Context, id uuid.UUID) (*bi
 
 func (r *assessmentSessionRepo) FindByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*biz.AssessmentSession, error) {
 	var models []*AssessmentSessionModel
-	if result := r.data.db.WithContext(ctx).Find(&models, "tenant_id = ?", tenantID); result.Error != nil {
+	// Order by created_at DESC agar session terbaru selalu di index 0 (dipakai frontend)
+	if result := r.data.db.WithContext(ctx).
+		Where("tenant_id = ?", tenantID).
+		Order("created_at DESC").
+		Find(&models); result.Error != nil {
 		return nil, result.Error
 	}
 	sessions := make([]*biz.AssessmentSession, 0, len(models))
@@ -272,13 +276,14 @@ func (r *regulationAssessmentRepo) RecalculateForSession(ctx context.Context, se
 	var rows []CountResult
 
 	err := r.data.db.WithContext(ctx).
-		Table("assessment_results ar").
-		Select("ar.compliance_status as status, COUNT(*) as count").
-		Joins("JOIN regulation_items ri ON ri.id = ar.regulation_item_id").
-		Where("ar.session_id = ? AND ri.regulation_id = ?", sessionID, regulationID).
-		Group("ar.compliance_status").
+		Table("assessment_results").
+		Select("assessment_results.compliance_status as status, COUNT(*) as count").
+		Joins("JOIN regulation_items ON regulation_items.id = assessment_results.regulation_item_id").
+		Where("assessment_results.session_id = ? AND regulation_items.regulation_id = ?", sessionID, regulationID).
+		Group("assessment_results.compliance_status").
 		Scan(&rows).Error
 	if err != nil {
+		r.log.Errorf("recalculation failed for session %s: %v", sessionID, err)
 		return nil, err
 	}
 

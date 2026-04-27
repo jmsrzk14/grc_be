@@ -1,6 +1,7 @@
 package biz
 
 import (
+	// "context"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,6 +34,7 @@ type TenantProperty struct {
 
 // --- Regulation Domain ---
 
+
 // Regulation merepresentasikan dokumen regulasi (POJK, SEOJK, UU).
 type Regulation struct {
 	ID             uuid.UUID
@@ -48,11 +50,11 @@ type Regulation struct {
 
 // RegulationItem merepresentasikan item/pasal dalam suatu regulasi.
 type RegulationItem struct {
-	ID                uuid.UUID
-	RegulationID      uuid.UUID
-	TenantPropertyIDs []uuid.UUID
-	ReferenceNumber   string // e.g., 'Pasal 1 ayat 1'
-	Content           string
+	ID              uuid.UUID
+	RegulationID    uuid.UUID
+	PropertyIDs     []uuid.UUID
+	ReferenceNumber string // e.g., 'Pasal 1 ayat 1'
+	Content         string
 }
 
 // RegulationPropertyMapping adalah mapping antara regulasi dan kategori aset.

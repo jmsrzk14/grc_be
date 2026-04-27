@@ -442,6 +442,14 @@ const docTemplate = `{
                 "tags": [
                     "RegulationsService"
                 ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant ID for chart calculation",
+                        "name": "tenant_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -500,6 +508,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tenant ID for chart calculation",
+                        "name": "tenant_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -991,6 +1005,36 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/v1/tenants/{id}/properties": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TenantsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/service.TenantPropertyResponse"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1055,6 +1099,12 @@ const docTemplate = `{
             "properties": {
                 "content": {
                     "type": "string"
+                },
+                "property_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "reference_number": {
                     "type": "string"
@@ -1131,6 +1181,12 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "property_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "reference_number": {
                     "type": "string"
@@ -1234,6 +1290,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "remarks": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.TenantPropertyResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "property_id": {
+                    "type": "string"
+                },
+                "tenant_id": {
                     "type": "string"
                 }
             }

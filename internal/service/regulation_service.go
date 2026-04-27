@@ -52,17 +52,17 @@ type UpdateRegulationRequest struct {
 }
 
 type CreateRegulationItemRequest struct {
-	ReferenceNumber   string   `json:"reference_number"`
-	Content           string   `json:"content"`
-	TenantPropertyIDs []string `json:"tenant_properti_ids"`
+	ReferenceNumber string   `json:"reference_number"`
+	Content         string   `json:"content"`
+	PropertyIDs     []string `json:"property_ids"`
 }
 
 type RegulationItemResponse struct {
-	ID                string   `json:"id"`
-	RegulationID      string   `json:"regulation_id"`
-	TenantPropertyIDs []string `json:"tenant_properti_ids"`
-	ReferenceNumber   string   `json:"reference_number"`
-	Content           string   `json:"content"`
+	ID              string   `json:"id"`
+	RegulationID    string   `json:"regulation_id"`
+	PropertyIDs     []string `json:"property_ids"`
+	ReferenceNumber string   `json:"reference_number"`
+	Content         string   `json:"content"`
 }
 
 type AddMappingRequest struct {
@@ -107,6 +107,7 @@ func (s *RegulationService) CreateRegulation(w http.ResponseWriter, r *http.Requ
 // @Tags RegulationsService
 // @Produce json
 // @Param id path string true "Regulation ID"
+// @Param tenant_id query string false "Tenant ID for chart calculation"
 // @Success 200 {object} RegulationResponse
 // @Router /api/v1/regulations/{id} [get]
 func (s *RegulationService) GetRegulation(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +116,13 @@ func (s *RegulationService) GetRegulation(w http.ResponseWriter, r *http.Request
 		respondError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	result, err := s.uc.GetRegulation(r.Context(), id)
+	tenantIDStr := r.URL.Query().Get("tenant_id")
+	var tenantID uuid.UUID
+	if tenantIDStr != "" {
+		tenantID, _ = uuid.Parse(tenantIDStr)
+	}
+
+	result, err := s.uc.GetRegulation(r.Context(), id, tenantID)
 	if err != nil {
 		if errors.Is(err, biz.ErrNotFound) {
 			respondError(w, http.StatusNotFound, "regulation not found")
@@ -130,10 +137,17 @@ func (s *RegulationService) GetRegulation(w http.ResponseWriter, r *http.Request
 // ListRegulations godoc
 // @Tags RegulationsService
 // @Produce json
+// @Param tenant_id query string false "Tenant ID for chart calculation"
 // @Success 200 {array} RegulationResponse
 // @Router /api/v1/regulations [get]
 func (s *RegulationService) ListRegulations(w http.ResponseWriter, r *http.Request) {
-	results, err := s.uc.ListRegulations(r.Context())
+	tenantIDStr := r.URL.Query().Get("tenant_id")
+	var tenantID uuid.UUID
+	if tenantIDStr != "" {
+		tenantID, _ = uuid.Parse(tenantIDStr)
+	}
+
+	results, err := s.uc.ListRegulations(r.Context(), tenantID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -220,17 +234,17 @@ func (s *RegulationService) CreateItem(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	tenantPropIDs := make([]uuid.UUID, 0, len(req.TenantPropertyIDs))
-	for _, idStr := range req.TenantPropertyIDs {
+	propertyIDs := make([]uuid.UUID, 0, len(req.PropertyIDs))
+	for _, idStr := range req.PropertyIDs {
 		if id, err := uuid.Parse(idStr); err == nil {
-			tenantPropIDs = append(tenantPropIDs, id)
+			propertyIDs = append(propertyIDs, id)
 		}
 	}
 	item := &biz.RegulationItem{
-		RegulationID:      regID,
-		TenantPropertyIDs: tenantPropIDs,
-		ReferenceNumber:   req.ReferenceNumber,
-		Content:           req.Content,
+		RegulationID:    regID,
+		PropertyIDs:     propertyIDs,
+		ReferenceNumber: req.ReferenceNumber,
+		Content:         req.Content,
 	}
 	result, err := s.uc.CreateRegulationItem(r.Context(), item)
 	if err != nil {
@@ -252,7 +266,13 @@ func (s *RegulationService) ListItems(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "invalid regulation id")
 		return
 	}
-	results, err := s.uc.ListRegulationItems(r.Context(), regID)
+	tenantIDStr := r.URL.Query().Get("tenant_id")
+	var tenantID uuid.UUID
+	if tenantIDStr != "" {
+		tenantID, _ = uuid.Parse(tenantIDStr)
+	}
+
+	results, err := s.uc.ListRegulationItems(r.Context(), regID, tenantID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -305,17 +325,17 @@ func (s *RegulationService) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	tenantPropIDs := make([]uuid.UUID, 0, len(req.TenantPropertyIDs))
-	for _, idStr := range req.TenantPropertyIDs {
+	propertyIDs := make([]uuid.UUID, 0, len(req.PropertyIDs))
+	for _, idStr := range req.PropertyIDs {
 		if id, err := uuid.Parse(idStr); err == nil {
-			tenantPropIDs = append(tenantPropIDs, id)
+			propertyIDs = append(propertyIDs, id)
 		}
 	}
 	item := &biz.RegulationItem{
-		ID:                id,
-		TenantPropertyIDs: tenantPropIDs,
-		ReferenceNumber:   req.ReferenceNumber,
-		Content:           req.Content,
+		ID:              id,
+		PropertyIDs:     propertyIDs,
+		ReferenceNumber: req.ReferenceNumber,
+		Content:         req.Content,
 	}
 	result, err := s.uc.UpdateRegulationItem(r.Context(), item)
 	if err != nil {
@@ -436,15 +456,15 @@ func toRegulationResponse(r *biz.Regulation) *RegulationResponse {
 }
 
 func toItemResponse(r *biz.RegulationItem) *RegulationItemResponse {
-	tenantPropIDs := make([]string, 0, len(r.TenantPropertyIDs))
-	for _, id := range r.TenantPropertyIDs {
-		tenantPropIDs = append(tenantPropIDs, id.String())
+	propertyIDs := make([]string, 0, len(r.PropertyIDs))
+	for _, id := range r.PropertyIDs {
+		propertyIDs = append(propertyIDs, id.String())
 	}
 	return &RegulationItemResponse{
-		ID:                r.ID.String(),
-		RegulationID:      r.RegulationID.String(),
-		TenantPropertyIDs: tenantPropIDs,
-		ReferenceNumber:   r.ReferenceNumber,
-		Content:           r.Content,
+		ID:              r.ID.String(),
+		RegulationID:    r.RegulationID.String(),
+		PropertyIDs:     propertyIDs,
+		ReferenceNumber: r.ReferenceNumber,
+		Content:         r.Content,
 	}
 }

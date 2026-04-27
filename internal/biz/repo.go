@@ -38,8 +38,8 @@ type TenantPropertyRepo interface {
 // RegulationRepo mendefinisikan kontrak akses data untuk Regulation.
 type RegulationRepo interface {
 	Create(ctx context.Context, r *Regulation) (*Regulation, error)
-	FindByID(ctx context.Context, id uuid.UUID) (*Regulation, error)
-	FindAll(ctx context.Context) ([]*Regulation, error)
+	FindByID(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*Regulation, error)
+	FindAll(ctx context.Context, tenantID uuid.UUID) ([]*Regulation, error)
 	Update(ctx context.Context, r *Regulation) (*Regulation, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -48,7 +48,10 @@ type RegulationRepo interface {
 type RegulationItemRepo interface {
 	Create(ctx context.Context, item *RegulationItem) (*RegulationItem, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*RegulationItem, error)
-	FindByRegulationID(ctx context.Context, regulationID uuid.UUID) ([]*RegulationItem, error)
+	FindByRegulationID(ctx context.Context, regulationID uuid.UUID, tenantID uuid.UUID) ([]*RegulationItem, error)
+	// FindExcludedByTenantID mengembalikan semua items yang propertinya TIDAK cocok dengan properti tenant.
+	// Items ini akan di-seed sebagai N/A secara otomatis ketika session baru dibuat.
+	FindExcludedByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*RegulationItem, error)
 	Update(ctx context.Context, item *RegulationItem) (*RegulationItem, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }

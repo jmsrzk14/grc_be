@@ -39,6 +39,10 @@ definitions:
     properties:
       content:
         type: string
+      property_ids:
+        items:
+          type: string
+        type: array
       reference_number:
         type: string
     type: object
@@ -88,6 +92,10 @@ definitions:
         type: string
       id:
         type: string
+      property_ids:
+        items:
+          type: string
+        type: array
       reference_number:
         type: string
       regulation_id:
@@ -155,6 +163,15 @@ definitions:
       regulation_item_id:
         type: string
       remarks:
+        type: string
+    type: object
+  service.TenantPropertyResponse:
+    properties:
+      id:
+        type: string
+      property_id:
+        type: string
+      tenant_id:
         type: string
     type: object
   service.TenantResponse:
@@ -467,6 +484,11 @@ paths:
       - PropertiesService
   /api/v1/regulations:
     get:
+      parameters:
+      - description: Tenant ID for chart calculation
+        in: query
+        name: tenant_id
+        type: string
       produces:
       - application/json
       responses:
@@ -520,6 +542,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Tenant ID for chart calculation
+        in: query
+        name: tenant_id
         type: string
       produces:
       - application/json
@@ -821,6 +847,25 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/service.TenantResponse'
+      tags:
+      - TenantsService
+  /api/v1/tenants/{id}/properties:
+    get:
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/service.TenantPropertyResponse'
+            type: array
       tags:
       - TenantsService
 swagger: "2.0"

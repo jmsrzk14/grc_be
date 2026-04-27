@@ -51,11 +51,11 @@ func (RegulationModel) TableName() string { return "regulations" }
 
 // RegulationItemModel adalah model GORM untuk tabel regulation_items.
 type RegulationItemModel struct {
-	ID               uuid.UUID             `gorm:"type:uuid;primaryKey"`
-	RegulationID     uuid.UUID             `gorm:"type:uuid;not null;index"`
-	TenantProperties []TenantPropertyModel `gorm:"many2many:regulation_item_tenant_properties;foreignKey:ID;joinForeignKey:regulation_item_model_id;References:ID;joinReferences:tenant_property_model_id"`
-	ReferenceNumber  string                `gorm:"not null"` // e.g., 'Pasal 1 ayat 1'
-	Content          string                `gorm:"type:text"`
+	ID              uuid.UUID       `gorm:"type:uuid;primaryKey"`
+	RegulationID    uuid.UUID       `gorm:"type:uuid;not null;index"`
+	Properties      []PropertyModel `gorm:"many2many:regulation_item_properties;foreignKey:ID;joinForeignKey:regulation_item_id;References:ID;joinReferences:property_id"`
+	ReferenceNumber string          `gorm:"not null"` // e.g., 'Pasal 1 ayat 1'
+	Content         string          `gorm:"type:text"`
 }
 
 func (RegulationItemModel) TableName() string { return "regulation_items" }

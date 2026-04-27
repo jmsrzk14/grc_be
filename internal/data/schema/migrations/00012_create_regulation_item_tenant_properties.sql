@@ -1,13 +1,13 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE regulation_item_tenant_properties (
-    regulation_item_model_id UUID NOT NULL REFERENCES regulation_items(id) ON DELETE CASCADE,
-    tenant_property_model_id UUID NOT NULL REFERENCES tenants_properties(id) ON DELETE CASCADE,
-    PRIMARY KEY (regulation_item_model_id, tenant_property_model_id)
+CREATE TABLE regulation_item_properties (
+    regulation_item_id UUID NOT NULL REFERENCES regulation_items(id) ON DELETE CASCADE,
+    property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    PRIMARY KEY (regulation_item_id, property_id)
 );
 
 -- Migrate existing data
-INSERT INTO regulation_item_tenant_properties (regulation_item_model_id, tenant_property_model_id)
+INSERT INTO regulation_item_properties (regulation_item_id, property_id)
 SELECT id, tenant_property_id FROM regulation_items WHERE tenant_property_id IS NOT NULL;
 
 -- Remove old column
@@ -20,9 +20,10 @@ ALTER TABLE regulation_items ADD COLUMN tenant_property_id UUID REFERENCES tenan
 
 -- Note: This back-migration only restores one property per item (the first one found)
 UPDATE regulation_items ri
-SET tenant_property_id = ritp.tenant_property_model_id
-FROM regulation_item_tenant_properties ritp
-WHERE ri.id = ritp.regulation_item_model_id;
+SET tenant_property_id = tp.id
+FROM regulation_item_properties rip
+JOIN tenants_properties tp ON rip.property_id = tp.property_id
+WHERE ri.id = rip.regulation_item_id;
 
-DROP TABLE regulation_item_tenant_properties;
+DROP TABLE regulation_item_properties;
 -- +goose StatementEnd

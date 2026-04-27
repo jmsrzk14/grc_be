@@ -38,7 +38,7 @@ func (r *regulationRepo) Create(ctx context.Context, reg *biz.Regulation) (*biz.
 	return reg, nil
 }
 
-func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.Regulation, error) {
+func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*biz.Regulation, error) {
 	type resultWithStats struct {
 		RegulationModel
 		AmountPass int
@@ -46,20 +46,47 @@ func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.Regul
 		AmountNA   int
 	}
 	var res resultWithStats
-	err := r.data.db.WithContext(ctx).Table("regulations").
-		Select("regulations.*, COALESCE(SUM(ra.amount_pass), 0) as amount_pass, COALESCE(SUM(ra.amount_fail), 0) as amount_fail, COALESCE(SUM(ra.amount_na), 0) as amount_na").
-		Joins("LEFT JOIN regulation_assesments ra ON regulations.id = ra.regulation_id").
-		Where("regulations.id = ?", id).
-		Group("regulations.id").
-		Scan(&res).Error
 
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, biz.ErrNotFound
+	db := r.data.db.WithContext(ctx).Table("regulations")
+
+	if tenantID != uuid.Nil {
+		// Ambil session terbaru milik tenant
+		type sessionRow struct{ ID uuid.UUID }
+		var latestSession sessionRow
+		r.data.db.WithContext(ctx).
+			Table("assessment_sessions").
+			Select("id").
+			Where("tenant_id = ?", tenantID).
+			Order("created_at DESC").
+			Limit(1).
+			Scan(&latestSession)
+
+		if latestSession.ID != uuid.Nil {
+			// Hitung amount dari tabel assessment_results berdasarkan session terbaru
+			subQuery := r.data.db.Table("assessment_results").
+				Select(
+					"regulation_items.regulation_id," +
+						" COUNT(CASE WHEN assessment_results.compliance_status = 'YES' THEN 1 END) AS amount_pass," +
+						" COUNT(CASE WHEN assessment_results.compliance_status = 'NO' THEN 1 END) AS amount_fail," +
+						" COUNT(CASE WHEN assessment_results.compliance_status = 'N/A' THEN 1 END) AS amount_na",
+				).
+				Joins("JOIN regulation_items ON regulation_items.id = assessment_results.regulation_item_id").
+				Where("assessment_results.session_id = ?", latestSession.ID).
+				Group("regulation_items.regulation_id")
+
+			db = db.
+				Select("regulations.*, COALESCE(stats.amount_pass, 0) AS amount_pass, COALESCE(stats.amount_fail, 0) AS amount_fail, COALESCE(stats.amount_na, 0) AS amount_na").
+				Joins("LEFT JOIN (?) AS stats ON regulations.id = stats.regulation_id", subQuery)
+		} else {
+			db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
 		}
+	} else {
+		db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
+	}
+
+	if err := db.Where("regulations.id = ?", id).Scan(&res).Error; err != nil {
 		return nil, err
 	}
-	// GORM Scan might not return ErrRecordNotFound with Group/Select
 	if res.ID == uuid.Nil {
 		return nil, biz.ErrNotFound
 	}
@@ -71,7 +98,7 @@ func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.Regul
 	return reg, nil
 }
 
-func (r *regulationRepo) FindAll(ctx context.Context) ([]*biz.Regulation, error) {
+func (r *regulationRepo) FindAll(ctx context.Context, tenantID uuid.UUID) ([]*biz.Regulation, error) {
 	type resultWithStats struct {
 		RegulationModel
 		AmountPass int
@@ -80,13 +107,45 @@ func (r *regulationRepo) FindAll(ctx context.Context) ([]*biz.Regulation, error)
 	}
 	var results []*resultWithStats
 
-	err := r.data.db.WithContext(ctx).Table("regulations").
-		Select("regulations.*, COALESCE(SUM(ra.amount_pass), 0) as amount_pass, COALESCE(SUM(ra.amount_fail), 0) as amount_fail, COALESCE(SUM(ra.amount_na), 0) as amount_na").
-		Joins("LEFT JOIN regulation_assesments ra ON regulations.id = ra.regulation_id").
-		Group("regulations.id").
-		Scan(&results).Error
+	db := r.data.db.WithContext(ctx).Table("regulations")
 
-	if err != nil {
+	if tenantID != uuid.Nil {
+		// Ambil session terbaru milik tenant
+		type sessionRow struct{ ID uuid.UUID }
+		var latestSession sessionRow
+		r.data.db.WithContext(ctx).
+			Table("assessment_sessions").
+			Select("id").
+			Where("tenant_id = ?", tenantID).
+			Order("created_at DESC").
+			Limit(1).
+			Scan(&latestSession)
+
+		if latestSession.ID != uuid.Nil {
+			// Hitung amount dari tabel assessment_results berdasarkan session terbaru
+			subQuery := r.data.db.Table("assessment_results").
+				Select(
+					"regulation_items.regulation_id," +
+						" COUNT(CASE WHEN assessment_results.compliance_status = 'YES' THEN 1 END) AS amount_pass," +
+						" COUNT(CASE WHEN assessment_results.compliance_status = 'NO' THEN 1 END) AS amount_fail," +
+						" COUNT(CASE WHEN assessment_results.compliance_status = 'N/A' THEN 1 END) AS amount_na",
+				).
+				Joins("JOIN regulation_items ON regulation_items.id = assessment_results.regulation_item_id").
+				Where("assessment_results.session_id = ?", latestSession.ID).
+				Group("regulation_items.regulation_id")
+
+			db = db.
+				Select("regulations.*, COALESCE(stats.amount_pass, 0) AS amount_pass, COALESCE(stats.amount_fail, 0) AS amount_fail, COALESCE(stats.amount_na, 0) AS amount_na").
+				Joins("LEFT JOIN (?) AS stats ON regulations.id = stats.regulation_id", subQuery)
+		} else {
+			db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
+		}
+	} else {
+		db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
+	}
+
+	if err := db.Scan(&results).Error; err != nil {
+		r.log.Errorf("failed to list regulations: %v", err)
 		return nil, err
 	}
 
@@ -156,12 +215,12 @@ func (r *regulationItemRepo) Create(ctx context.Context, item *biz.RegulationIte
 			return err
 		}
 
-		if len(item.TenantPropertyIDs) > 0 {
-			tenantProps := make([]TenantPropertyModel, 0, len(item.TenantPropertyIDs))
-			for _, id := range item.TenantPropertyIDs {
-				tenantProps = append(tenantProps, TenantPropertyModel{ID: id})
+		if len(item.PropertyIDs) > 0 {
+			props := make([]PropertyModel, 0, len(item.PropertyIDs))
+			for _, id := range item.PropertyIDs {
+				props = append(props, PropertyModel{ID: id})
 			}
-			return tx.Model(m).Association("TenantProperties").Append(tenantProps)
+			return tx.Model(m).Association("Properties").Append(props)
 		}
 		return nil
 	})
@@ -174,7 +233,7 @@ func (r *regulationItemRepo) Create(ctx context.Context, item *biz.RegulationIte
 
 func (r *regulationItemRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.RegulationItem, error) {
 	var m RegulationItemModel
-	if result := r.data.db.WithContext(ctx).Preload("TenantProperties").First(&m, "id = ?", id); result.Error != nil {
+	if result := r.data.db.WithContext(ctx).Preload("Properties").First(&m, "id = ?", id); result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, biz.ErrNotFound
 		}
@@ -183,9 +242,21 @@ func (r *regulationItemRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.R
 	return toRegulationItemDomain(&m), nil
 }
 
-func (r *regulationItemRepo) FindByRegulationID(ctx context.Context, regulationID uuid.UUID) ([]*biz.RegulationItem, error) {
+func (r *regulationItemRepo) FindByRegulationID(ctx context.Context, regulationID uuid.UUID, tenantID uuid.UUID) ([]*biz.RegulationItem, error) {
 	var models []*RegulationItemModel
-	if result := r.data.db.WithContext(ctx).Preload("TenantProperties").Order("reference_number ASC").Find(&models, "regulation_id = ?", regulationID); result.Error != nil {
+	db := r.data.db.WithContext(ctx).Preload("Properties").Order("reference_number ASC")
+
+	if tenantID != uuid.Nil {
+		// Filter items that are linked to properties that this tenant also has
+		db = db.Joins("JOIN regulation_item_properties rip ON regulation_items.id = rip.regulation_item_id").
+			Joins("JOIN tenants_properties tp ON rip.property_id = tp.property_id").
+			Where("regulation_items.regulation_id = ? AND tp.tenant_id = ?", regulationID, tenantID).
+			Group("regulation_items.id")
+	} else {
+		db = db.Where("regulation_id = ?", regulationID)
+	}
+
+	if result := db.Find(&models); result.Error != nil {
 		return nil, result.Error
 	}
 	items := make([]*biz.RegulationItem, 0, len(models))
@@ -195,23 +266,51 @@ func (r *regulationItemRepo) FindByRegulationID(ctx context.Context, regulationI
 	return items, nil
 }
 
+// FindExcludedByTenantID mengembalikan semua regulation items yang propertinya
+// TIDAK ada dalam daftar properti yang dimiliki tenant.
+// Digunakan untuk auto-seed N/A saat session baru dibuat.
+func (r *regulationItemRepo) FindExcludedByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*biz.RegulationItem, error) {
+	var models []*RegulationItemModel
+
+	// Ambil items yang TIDAK memiliki property yang cocok dengan tenant
+	// yaitu items yang property-nya tidak ada di tenants_properties untuk tenant ini
+	err := r.data.db.WithContext(ctx).
+		Preload("Properties").
+		Where(`regulation_items.id NOT IN (
+			SELECT DISTINCT rip.regulation_item_id
+			FROM regulation_item_properties rip
+			JOIN tenants_properties tp ON rip.property_id = tp.property_id
+			WHERE tp.tenant_id = ?
+		)`, tenantID).
+		Find(&models).Error
+
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*biz.RegulationItem, 0, len(models))
+	for _, m := range models {
+		items = append(items, toRegulationItemDomain(m))
+	}
+	return items, nil
+}
+
 func (r *regulationItemRepo) Update(ctx context.Context, item *biz.RegulationItem) (*biz.RegulationItem, error) {
-	tenantProps := make([]TenantPropertyModel, 0, len(item.TenantPropertyIDs))
-	for _, id := range item.TenantPropertyIDs {
-		tenantProps = append(tenantProps, TenantPropertyModel{ID: id})
+	props := make([]PropertyModel, 0, len(item.PropertyIDs))
+	for _, id := range item.PropertyIDs {
+		props = append(props, PropertyModel{ID: id})
 	}
 	m := &RegulationItemModel{
-		ID:               item.ID,
-		RegulationID:     item.RegulationID,
-		ReferenceNumber:  item.ReferenceNumber,
-		Content:          item.Content,
+		ID:              item.ID,
+		RegulationID:    item.RegulationID,
+		ReferenceNumber: item.ReferenceNumber,
+		Content:         item.Content,
 	}
 
 	err := r.data.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(m).Error; err != nil {
 			return err
 		}
-		return tx.Model(m).Association("TenantProperties").Replace(tenantProps)
+		return tx.Model(m).Association("Properties").Replace(props)
 	})
 
 	if err != nil {
@@ -225,16 +324,16 @@ func (r *regulationItemRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func toRegulationItemDomain(m *RegulationItemModel) *biz.RegulationItem {
-	ids := make([]uuid.UUID, 0, len(m.TenantProperties))
-	for _, tp := range m.TenantProperties {
-		ids = append(ids, tp.ID)
+	ids := make([]uuid.UUID, 0, len(m.Properties))
+	for _, p := range m.Properties {
+		ids = append(ids, p.ID)
 	}
 	return &biz.RegulationItem{
-		ID:                m.ID,
-		RegulationID:      m.RegulationID,
-		TenantPropertyIDs: ids,
-		ReferenceNumber:   m.ReferenceNumber,
-		Content:           m.Content,
+		ID:              m.ID,
+		RegulationID:    m.RegulationID,
+		PropertyIDs:     ids,
+		ReferenceNumber: m.ReferenceNumber,
+		Content:         m.Content,
 	}
 }
 

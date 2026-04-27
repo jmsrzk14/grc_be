@@ -27,6 +27,7 @@ type CreateSessionRequest struct {
 	TenantID   string `json:"tenant_id"`
 	Title      string `json:"title"`
 	PeriodYear int    `json:"period_year"`
+	Status     string `json:"status"`
 }
 
 type SessionResponse struct {
@@ -133,6 +134,7 @@ func (s *AssessmentService) UpdateSession(w http.ResponseWriter, r *http.Request
 		TenantID:   tenantID,
 		Title:      req.Title,
 		PeriodYear: req.PeriodYear,
+		Status:     req.Status,
 	}
 	result, err := s.uc.UpdateSession(r.Context(), session)
 	if err != nil {
