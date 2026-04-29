@@ -810,6 +810,7 @@ paths:
             items:
               $ref: '#/definitions/biz.RiskCategory'
             type: array
+      summary: List risk categories
       tags:
       - RiskService
     post:
@@ -830,6 +831,7 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/biz.RiskCategory'
+      summary: Create risk category
       tags:
       - RiskService
   /api/v1/risk-categories/{id}:
@@ -844,6 +846,7 @@ paths:
       responses:
         "204":
           description: No Content
+      summary: Delete risk category
       tags:
       - RiskService
     get:
@@ -861,6 +864,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/biz.RiskCategory'
+      summary: Get risk category
       tags:
       - RiskService
     put:
@@ -886,6 +890,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/biz.RiskCategory'
+      summary: Update risk category
       tags:
       - RiskService
   /api/v1/risks:
@@ -906,6 +911,7 @@ paths:
             items:
               $ref: '#/definitions/biz.Risk'
             type: array
+      summary: List risks
       tags:
       - RiskService
     post:
@@ -926,6 +932,7 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/biz.Risk'
+      summary: Create risk
       tags:
       - RiskService
   /api/v1/risks/{id}:
@@ -940,6 +947,7 @@ paths:
       responses:
         "204":
           description: No Content
+      summary: Delete risk
       tags:
       - RiskService
     get:
@@ -957,6 +965,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/biz.Risk'
+      summary: Get risk
       tags:
       - RiskService
     put:
@@ -982,6 +991,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/biz.Risk'
+      summary: Update risk
       tags:
       - RiskService
   /api/v1/tenants:

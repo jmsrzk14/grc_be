@@ -867,6 +867,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "List risk categories",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -890,6 +891,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "Create risk category",
                 "parameters": [
                     {
                         "description": "Risk Category",
@@ -920,6 +922,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "Get risk category",
                 "parameters": [
                     {
                         "type": "string",
@@ -949,6 +952,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "Update risk category",
                 "parameters": [
                     {
                         "type": "string",
@@ -981,6 +985,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "Delete risk category",
                 "parameters": [
                     {
                         "type": "string",
@@ -1006,6 +1011,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "List risks",
                 "parameters": [
                     {
                         "type": "string",
@@ -1038,6 +1044,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "Create risk",
                 "parameters": [
                     {
                         "description": "Risk Item",
@@ -1068,6 +1075,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "Get risk",
                 "parameters": [
                     {
                         "type": "string",
@@ -1097,6 +1105,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "Update risk",
                 "parameters": [
                     {
                         "type": "string",
@@ -1129,6 +1138,7 @@
                 "tags": [
                     "RiskService"
                 ],
+                "summary": "Delete risk",
                 "parameters": [
                     {
                         "type": "string",

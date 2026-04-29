@@ -10,6 +10,8 @@
 
 // @tag.name AssessmentsService
 
+// @tag.name RiskService
+
 package main
 
 import (
@@ -95,20 +97,24 @@ func main() {
 	resultRepo := data.NewAssessmentResultRepo(d, logger)
 	raRepo := data.NewRegulationAssessmentRepo(d, logger)
 	authRepo := data.NewAuthRepo(d, logger)
+	riskRepo := data.NewRiskRepo(d, logger)
+	riskCatRepo := data.NewRiskCategoryRepo(d, logger)
 
 	tenantUC := biz.NewTenantUseCase(tenantRepo, logger)
 	propertyUC := biz.NewPropertyUseCase(propertyRepo, tpRepo, logger)
 	regUC := biz.NewRegulationUseCase(regRepo, itemRepo, mappingRepo, logger)
 	assUC := biz.NewAssessmentUseCase(sessionRepo, resultRepo, raRepo, itemRepo, logger)
 	authUC := biz.NewAuthUseCase(authRepo, logger)
+	riskUC := biz.NewRiskUseCase(riskRepo, riskCatRepo, logger)
 
 	tenantSvc := service.NewTenantService(tenantUC, propertyUC, logger)
 	propSvc := service.NewPropertyService(propertyUC, logger)
 	regSvc := service.NewRegulationService(regUC, logger)
 	assSvc := service.NewAssessmentService(assUC, logger)
 	authSvc := service.NewAuthService(authUC, logger)
+	riskSvc := service.NewRiskService(riskUC, logger)
 
-	httpSrv := server.NewHTTPServer(bc.Server, tenantSvc, propSvc, regSvc, assSvc, authSvc, logger)
+	httpSrv := server.NewHTTPServer(bc.Server, tenantSvc, propSvc, regSvc, assSvc, authSvc, riskSvc, logger)
 
 	app := newApp(logger, httpSrv)
 

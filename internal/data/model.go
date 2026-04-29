@@ -119,3 +119,30 @@ type UserModel struct {
 
 func (UserModel) TableName() string { return "users" }
 
+// RiskCategoryModel adalah model GORM untuk tabel risk_categories.
+type RiskCategoryModel struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Title     string    `gorm:"not null"`
+	Appetite  string    `gorm:"type:text"`
+	Tolerance string    `gorm:"type:text"`
+}
+
+func (RiskCategoryModel) TableName() string { return "risk_categories" }
+
+// RiskModel adalah model GORM untuk tabel risks.
+type RiskModel struct {
+	ID                 uuid.UUID `gorm:"type:uuid;primaryKey"`
+	TenantID           uuid.UUID `gorm:"type:uuid;not null;index"`
+	RiskTitle          string    `gorm:"not null"`
+	RiskDescription    string    `gorm:"type:text"`
+	CategoryID         uuid.UUID `gorm:"type:uuid;not null;index"`
+	LikelihoodInherent int       `gorm:"default:0"`
+	ImpactInherent     int       `gorm:"default:0"`
+	LikelihoodResidual int       `gorm:"default:0"`
+	ImpactResidual     int       `gorm:"default:0"`
+	MitigationPlan     string    `gorm:"type:text"`
+	MitigationStatus   string    `gorm:"not null;default:'belum direncanakan'"`
+}
+
+func (RiskModel) TableName() string { return "risks" }
+

@@ -93,3 +93,21 @@ type RegulationAssessmentRepo interface {
 	Update(ctx context.Context, ra *RegulationAssessment) (*RegulationAssessment, error)
 	RecalculateForSession(ctx context.Context, sessionID uuid.UUID, regulationID uuid.UUID) (*RegulationAssessment, error)
 }
+
+// --- Risk Management Repository Interface ---
+
+type RiskCategoryRepo interface {
+	Create(ctx context.Context, category *RiskCategory) (*RiskCategory, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*RiskCategory, error)
+	FindAll(ctx context.Context) ([]*RiskCategory, error)
+	Update(ctx context.Context, category *RiskCategory) (*RiskCategory, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type RiskRepo interface {
+	Create(ctx context.Context, risk *Risk) (*Risk, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*Risk, error)
+	FindAll(ctx context.Context, tenantID uuid.UUID) ([]*Risk, error)
+	Update(ctx context.Context, risk *Risk) (*Risk, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+}

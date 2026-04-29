@@ -109,3 +109,28 @@ type User struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+// --- Risk Management Domain ---
+
+// RiskCategory merepresentasikan kategori risiko (e.g., 'Operasional', 'Finansial').
+type RiskCategory struct {
+	ID        uuid.UUID `json:"id"`
+	Title     string    `json:"title"`
+	Appetite  string    `json:"appetite"`
+	Tolerance string    `json:"tolerance"`
+}
+
+// Risk merepresentasikan item risiko.
+type Risk struct {
+	ID                 uuid.UUID `json:"id"`
+	TenantID           uuid.UUID `json:"tenant_id"`
+	RiskTitle          string    `json:"risk_title"`
+	RiskDescription    string    `json:"risk_description"`
+	CategoryID         uuid.UUID `json:"category_id"`
+	LikelihoodInherent int       `json:"likelihood_inherent"`
+	ImpactInherent     int       `json:"impact_inherent"`
+	LikelihoodResidual int       `json:"likelihood_residual"`
+	ImpactResidual     int       `json:"impact_residual"`
+	MitigationPlan     string    `json:"mitigation_plan"`
+	MitigationStatus   string    `json:"mitigation_status"`
+}

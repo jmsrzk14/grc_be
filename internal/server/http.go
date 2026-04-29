@@ -15,7 +15,7 @@ import (
 )
 
 // NewHTTPServer create a HTTP server.
-func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *service.PropertyService, reg *service.RegulationService, ass *service.AssessmentService, auth *service.AuthService, logger log.Logger) *khttp.Server {
+func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *service.PropertyService, reg *service.RegulationService, ass *service.AssessmentService, auth *service.AuthService, risk *service.RiskService, logger log.Logger) *khttp.Server {
 	var opts = []khttp.ServerOption{
 		khttp.Middleware(
 			recovery.Recovery(),
@@ -78,6 +78,21 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	a.HandleFunc("/sessions/{id}/results", ass.SubmitResult).Methods("POST")
 	a.HandleFunc("/sessions/{id}/results/{result_id}", ass.DeleteResult).Methods("DELETE")
 	a.HandleFunc("/sessions/{id}/summaries", ass.GetSummaries).Methods("GET")
+
+	// Risk Management API
+	rc := router.PathPrefix("/api/v1/risk-categories").Subrouter()
+	rc.HandleFunc("", risk.ListCategories).Methods("GET")
+	rc.HandleFunc("", risk.CreateCategory).Methods("POST")
+	rc.HandleFunc("/{id}", risk.GetCategory).Methods("GET")
+	rc.HandleFunc("/{id}", risk.UpdateCategory).Methods("PUT")
+	rc.HandleFunc("/{id}", risk.DeleteCategory).Methods("DELETE")
+
+	ri := router.PathPrefix("/api/v1/risks").Subrouter()
+	ri.HandleFunc("", risk.ListRisks).Methods("GET")
+	ri.HandleFunc("", risk.CreateRisk).Methods("POST")
+	ri.HandleFunc("/{id}", risk.GetRisk).Methods("GET")
+	ri.HandleFunc("/{id}", risk.UpdateRisk).Methods("PUT")
+	ri.HandleFunc("/{id}", risk.DeleteRisk).Methods("DELETE")
 
 	// Swagger UI & OpenAPI Spec
 	router.HandleFunc("/swagger.json", func(w http.ResponseWriter, r *http.Request) {

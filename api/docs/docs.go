@@ -866,6 +866,293 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/risk-categories": {
+            "get": {
+                "description": "List all risk categories",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RiskService"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/biz.RiskCategory"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new risk category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "description": "Risk Category",
+                        "name": "category",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/biz.RiskCategory"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/biz.RiskCategory"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/risk-categories/{id}": {
+            "get": {
+                "description": "Get a risk category by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/biz.RiskCategory"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update a risk category",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Risk Category",
+                        "name": "category",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/biz.RiskCategory"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/biz.RiskCategory"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a risk category",
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/api/v1/risks": {
+            "get": {
+                "description": "List all risks for a tenant",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant ID",
+                        "name": "tenant_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/biz.Risk"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new risk item",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "description": "Risk Item",
+                        "name": "risk",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/biz.Risk"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/biz.Risk"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/risks/{id}": {
+            "get": {
+                "description": "Get a risk item by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Risk ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/biz.Risk"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update a risk item",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Risk ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Risk Item",
+                        "name": "risk",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/biz.Risk"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/biz.Risk"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a risk item",
+                "tags": [
+                    "RiskService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Risk ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/api/v1/tenants": {
             "get": {
                 "produces": [
@@ -1075,6 +1362,61 @@ const docTemplate = `{
                 }
             }
         },
+        "biz.Risk": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "impact_inherent": {
+                    "type": "integer"
+                },
+                "impact_residual": {
+                    "type": "integer"
+                },
+                "likelihood_inherent": {
+                    "type": "integer"
+                },
+                "likelihood_residual": {
+                    "type": "integer"
+                },
+                "mitigation_plan": {
+                    "type": "string"
+                },
+                "mitigation_status": {
+                    "type": "string"
+                },
+                "risk_description": {
+                    "type": "string"
+                },
+                "risk_title": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "biz.RiskCategory": {
+            "type": "object",
+            "properties": {
+                "appetite": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "tolerance": {
+                    "type": "string"
+                }
+            }
+        },
         "service.AddMappingRequest": {
             "type": "object",
             "properties": {
@@ -1136,6 +1478,9 @@ const docTemplate = `{
             "properties": {
                 "period_year": {
                     "type": "integer"
+                },
+                "status": {
+                    "type": "string"
                 },
                 "tenant_id": {
                     "type": "string"
@@ -1375,6 +1720,9 @@ const docTemplate = `{
         },
         {
             "name": "AssessmentsService"
+        },
+        {
+            "name": "RiskService"
         }
     ]
 }`
