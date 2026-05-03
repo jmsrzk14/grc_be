@@ -80,6 +80,13 @@ func main() {
 		bc.Server.HTTP.Addr = ":" + port
 	}
 
+	// Database Source override (Railway fallback)
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		if bc.Data != nil && bc.Data.Database != nil {
+			bc.Data.Database.Source = dbURL
+		}
+	}
+
 	// Manual Dependency Injection (tanpa Wire agar cepat)
 	d, cleanup, err := data.NewData(bc.Data, logger)
 	if err != nil {
