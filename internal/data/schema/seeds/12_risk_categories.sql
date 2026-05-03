@@ -1,8 +1,7 @@
-INSERT INTO risk_categories (id, title, appetite, tolerance)
-VALUES 
-    (gen_random_uuid(), 'Likuiditas', '70', '10'),
-    (gen_random_uuid(), 'Operasional', '65', '5'),
-    (gen_random_uuid(), 'Compliance', '55', '10'),
-    (gen_random_uuid(), 'Reputasi', '60', '7'),
-    (gen_random_uuid(), 'Strategis', '65', '8')
+INSERT INTO risk_categories (id, title) VALUES
+  ('bb000001-0000-0000-0000-000000000001', 'Likuiditas'),
+  ('bb000001-0000-0000-0000-000000000002', 'Operasional'),
+  ('bb000001-0000-0000-0000-000000000003', 'Kepatuhan (Compliance)'),
+  ('bb000001-0000-0000-0000-000000000004', 'Reputasi'),
+  ('bb000001-0000-0000-0000-000000000005', 'Strategis')
 ON CONFLICT (title) DO NOTHING;

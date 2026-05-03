@@ -99,13 +99,14 @@ func main() {
 	authRepo := data.NewAuthRepo(d, logger)
 	riskRepo := data.NewRiskRepo(d, logger)
 	riskCatRepo := data.NewRiskCategoryRepo(d, logger)
+	riskCatTenantRepo := data.NewRiskCategoryTenantRepo(d, logger)
 
 	tenantUC := biz.NewTenantUseCase(tenantRepo, logger)
 	propertyUC := biz.NewPropertyUseCase(propertyRepo, tpRepo, logger)
 	regUC := biz.NewRegulationUseCase(regRepo, itemRepo, mappingRepo, logger)
 	assUC := biz.NewAssessmentUseCase(sessionRepo, resultRepo, raRepo, itemRepo, logger)
 	authUC := biz.NewAuthUseCase(authRepo, logger)
-	riskUC := biz.NewRiskUseCase(riskRepo, riskCatRepo, logger)
+	riskUC := biz.NewRiskUseCase(riskRepo, riskCatRepo, riskCatTenantRepo, logger)
 
 	tenantSvc := service.NewTenantService(tenantUC, propertyUC, logger)
 	propSvc := service.NewPropertyService(propertyUC, logger)

@@ -111,3 +111,9 @@ type RiskRepo interface {
 	Update(ctx context.Context, risk *Risk) (*Risk, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
+
+type RiskCategoryTenantRepo interface {
+	Create(ctx context.Context, s *RiskCategoryTenant) (*RiskCategoryTenant, error)
+	FindByTenantAndCategory(ctx context.Context, tenantID, categoryID uuid.UUID) (*RiskCategoryTenant, error)
+	Update(ctx context.Context, s *RiskCategoryTenant) (*RiskCategoryTenant, error)
+}

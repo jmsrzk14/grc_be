@@ -114,16 +114,23 @@ type User struct {
 
 // RiskCategory merepresentasikan kategori risiko (e.g., 'Operasional', 'Finansial').
 type RiskCategory struct {
-	ID        uuid.UUID `json:"id"`
-	Title     string    `json:"title"`
-	Appetite  string    `json:"appetite"`
-	Tolerance string    `json:"tolerance"`
+	ID    uuid.UUID `json:"id"`
+	Title string    `json:"title"`
+}
+
+// RiskCategoryTenant merepresentasikan pengaturan appetite dan tolerance per tenant untuk suatu risiko.
+type RiskCategoryTenant struct {
+	ID             uuid.UUID `json:"id"`
+	RiskID         uuid.UUID `json:"risk_id"`
+	RiskCategoryID uuid.UUID `json:"risk_category_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
+	Appetite       string    `json:"appetite"`
+	Tolerance      string    `json:"tolerance"`
 }
 
 // Risk merepresentasikan item risiko.
 type Risk struct {
 	ID                 uuid.UUID `json:"id"`
-	TenantID           uuid.UUID `json:"tenant_id"`
 	RiskTitle          string    `json:"risk_title"`
 	RiskDescription    string    `json:"risk_description"`
 	CategoryID         uuid.UUID `json:"category_id"`

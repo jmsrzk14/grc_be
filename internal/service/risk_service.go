@@ -165,6 +165,17 @@ func (s *RiskService) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 // @Success 201 {object} biz.Risk
 // @Router /api/v1/risks [post]
 func (s *RiskService) CreateRisk(w http.ResponseWriter, r *http.Request) {
+	tenantIDStr := r.URL.Query().Get("tenant_id")
+	if tenantIDStr == "" {
+		http.Error(w, "tenant_id is required", http.StatusBadRequest)
+		return
+	}
+	tenantID, err := uuid.Parse(tenantIDStr)
+	if err != nil {
+		http.Error(w, "invalid tenant_id", http.StatusBadRequest)
+		return
+	}
+
 	var risk biz.Risk
 	if err := json.NewDecoder(r.Body).Decode(&risk); err != nil {
 		s.log.Errorf("failed to decode request: %v", err)
@@ -172,7 +183,7 @@ func (s *RiskService) CreateRisk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := s.uc.CreateRisk(r.Context(), &risk)
+	res, err := s.uc.CreateRisk(r.Context(), &risk, tenantID)
 	if err != nil {
 		s.log.Errorf("failed to create risk: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -297,4 +308,47 @@ func (s *RiskService) DeleteRisk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// --- Risk Category Tenant Handlers ---
+
+func (s *RiskService) GetCategoryTenant(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	catID, _ := uuid.Parse(vars["id"])
+	tenantIDStr := r.URL.Query().Get("tenant_id")
+	if tenantIDStr == "" {
+		http.Error(w, "tenant_id is required", http.StatusBadRequest)
+		return
+	}
+	tenantID, _ := uuid.Parse(tenantIDStr)
+
+	res, err := s.uc.GetCategoryTenant(r.Context(), tenantID, catID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
+}
+
+func (s *RiskService) SaveCategoryTenant(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	catID, _ := uuid.Parse(vars["id"])
+	
+	var tenantSetting biz.RiskCategoryTenant
+	if err := json.NewDecoder(r.Body).Decode(&tenantSetting); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	tenantSetting.RiskCategoryID = catID
+
+	res, err := s.uc.SaveCategoryTenant(r.Context(), &tenantSetting)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
 }

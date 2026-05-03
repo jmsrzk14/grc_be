@@ -86,6 +86,8 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	rc.HandleFunc("/{id}", risk.GetCategory).Methods("GET")
 	rc.HandleFunc("/{id}", risk.UpdateCategory).Methods("PUT")
 	rc.HandleFunc("/{id}", risk.DeleteCategory).Methods("DELETE")
+	rc.HandleFunc("/{id}/settings", risk.GetCategoryTenant).Methods("GET")
+	rc.HandleFunc("/{id}/settings", risk.SaveCategoryTenant).Methods("POST")
 
 	ri := router.PathPrefix("/api/v1/risks").Subrouter()
 	ri.HandleFunc("", risk.ListRisks).Methods("GET")
