@@ -54,6 +54,7 @@ type RegulationItemModel struct {
 	ID              uuid.UUID       `gorm:"type:uuid;primaryKey"`
 	RegulationID    uuid.UUID       `gorm:"type:uuid;not null;index"`
 	Properties      []PropertyModel `gorm:"many2many:regulation_item_properties;foreignKey:ID;joinForeignKey:regulation_item_id;References:ID;joinReferences:property_id"`
+	ItemCode        string          `gorm:"size:100"` // e.g., '1.1'
 	ReferenceNumber string          `gorm:"not null"` // e.g., 'Pasal 1 ayat 1'
 	Content         string          `gorm:"type:text"`
 }
@@ -88,7 +89,7 @@ type AssessmentResultModel struct {
 	RegulationItemID uuid.UUID `gorm:"type:uuid;not null;index"`
 	ComplianceStatus string    `gorm:"not null"` // YES, NO, N/A
 	EvidenceLink     string
-	Remarks          string    `gorm:"type:text"`
+	Remarks          string `gorm:"type:text"`
 	UpdatedAt        time.Time
 }
 
@@ -129,12 +130,12 @@ func (RiskCategoryModel) TableName() string { return "risk_categories" }
 
 // RiskCategoryTenantModel adalah model GORM untuk tabel risk_category_tenants.
 type RiskCategoryTenantModel struct {
-	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ID             uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	RiskID         *uuid.UUID `gorm:"type:uuid;index"`
-	RiskCategoryID uuid.UUID `gorm:"type:uuid;not null;index"`
-	TenantID       uuid.UUID `gorm:"type:uuid;not null;index"`
-	Appetite       string    `gorm:"type:text"`
-	Tolerance      string    `gorm:"type:text"`
+	RiskCategoryID uuid.UUID  `gorm:"type:uuid;not null;index"`
+	TenantID       uuid.UUID  `gorm:"type:uuid;not null;index"`
+	Appetite       string     `gorm:"type:text"`
+	Tolerance      string     `gorm:"type:text"`
 }
 
 func (RiskCategoryTenantModel) TableName() string { return "risk_category_tenants" }
@@ -154,4 +155,3 @@ type RiskModel struct {
 }
 
 func (RiskModel) TableName() string { return "risks" }
-

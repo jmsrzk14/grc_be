@@ -10,11 +10,11 @@ import (
 
 // AssessmentUseCase menangani logika bisnis untuk modul Assessment.
 type AssessmentUseCase struct {
-	sessionRepo      AssessmentSessionRepo
-	resultRepo       AssessmentResultRepo
+	sessionRepo       AssessmentSessionRepo
+	resultRepo        AssessmentResultRepo
 	regulationAssRepo RegulationAssessmentRepo
-	itemRepo         RegulationItemRepo
-	log              *log.Helper
+	itemRepo          RegulationItemRepo
+	log               *log.Helper
 }
 
 // NewAssessmentUseCase membuat instance baru.
@@ -26,19 +26,17 @@ func NewAssessmentUseCase(
 	logger log.Logger,
 ) *AssessmentUseCase {
 	return &AssessmentUseCase{
-		sessionRepo:      sessionRepo,
-		resultRepo:       resultRepo,
+		sessionRepo:       sessionRepo,
+		resultRepo:        resultRepo,
 		regulationAssRepo: regulationAssRepo,
-		itemRepo:         itemRepo,
-		log:              log.NewHelper(logger),
+		itemRepo:          itemRepo,
+		log:               log.NewHelper(logger),
 	}
 }
 
 // --- AssessmentSession Use Cases ---
 
 // CreateSession membuat sesi assessment baru.
-// Setelah session dibuat, otomatis seed N/A untuk semua items yang propertinya
-// tidak cocok dengan properti tenant, agar amount_na terhitung sejak awal.
 func (uc *AssessmentUseCase) CreateSession(ctx context.Context, session *AssessmentSession) (*AssessmentSession, error) {
 	if session.TenantID == uuid.Nil {
 		return nil, fmt.Errorf("tenant_id is required")
@@ -54,37 +52,66 @@ func (uc *AssessmentUseCase) CreateSession(ctx context.Context, session *Assessm
 		return nil, err
 	}
 
-	// Auto-seed N/A untuk items yang tidak relevan bagi tenant ini
-	excludedItems, err := uc.itemRepo.FindExcludedByTenantID(ctx, session.TenantID)
-	if err != nil {
-		uc.log.WithContext(ctx).Warnf("failed to fetch excluded items for tenant %s: %v", session.TenantID, err)
-		return created, nil
-	}
-
-	// Kumpulkan regulation_id unik untuk recalculate setelah seed
-	regulationIDs := make(map[uuid.UUID]struct{})
-	for _, item := range excludedItems {
-		naResult := &AssessmentResult{
-			ID:               uuid.New(),
-			SessionID:        created.ID,
-			RegulationItemID: item.ID,
-			ComplianceStatus: "N/A",
-			Remarks:          "Item tidak relevan untuk properti tenant ini",
-		}
-		if _, err := uc.resultRepo.Upsert(ctx, naResult); err != nil {
-			uc.log.WithContext(ctx).Warnf("failed to seed N/A for item %s: %v", item.ID, err)
-		}
-		regulationIDs[item.RegulationID] = struct{}{}
-	}
-
-	// Recalculate summary per regulasi
-	for regID := range regulationIDs {
-		if _, err := uc.regulationAssRepo.RecalculateForSession(ctx, created.ID, regID); err != nil {
-			uc.log.WithContext(ctx).Warnf("recalculate failed for regulation %s: %v", regID, err)
-		}
-	}
-
 	return created, nil
+}
+
+// SynchronizeSession memastikan semua item dalam satu regulasi terdata.
+// Item yang tidak relevan dengan properti tenant akan otomatis diset N/A.
+// Item yang relevan dibiarkan kosong agar berstatus "Belum Dijawab".
+func (uc *AssessmentUseCase) SynchronizeSession(ctx context.Context, sessionID uuid.UUID, regulationID uuid.UUID) error {
+	session, err := uc.sessionRepo.FindByID(ctx, sessionID)
+	if err != nil {
+		return err
+	}
+
+	// 1. Ambil SEMUA item untuk regulasi ini
+	allItems, err := uc.itemRepo.FindByRegulationID(ctx, regulationID, uuid.Nil)
+	if err != nil {
+		return err
+	}
+
+	// 2. Ambil item yang RELEVAN untuk tenant ini
+	relevantItems, err := uc.itemRepo.FindByRegulationID(ctx, regulationID, session.TenantID)
+	if err != nil {
+		return err
+	}
+	relevantMap := make(map[uuid.UUID]bool)
+	for _, item := range relevantItems {
+		relevantMap[item.ID] = true
+	}
+
+	// 3. Ambil hasil yang sudah ada di sesi ini
+	existingResults, err := uc.resultRepo.FindBySessionID(ctx, sessionID)
+	if err != nil {
+		return err
+	}
+	resultMap := make(map[uuid.UUID]bool)
+	for _, res := range existingResults {
+		resultMap[res.RegulationItemID] = true
+	}
+
+	// 4. Tambahkan entry N/A HANYA untuk item yang TIDAK RELEVAN dan belum ada hasilnya
+	for _, item := range allItems {
+		if !resultMap[item.ID] && !relevantMap[item.ID] {
+			naResult := &AssessmentResult{
+				ID:               uuid.New(),
+				SessionID:        sessionID,
+				RegulationItemID: item.ID,
+				ComplianceStatus: "N/A",
+				Remarks:          "Item tidak relevan untuk properti tenant ini",
+			}
+			if _, err := uc.resultRepo.Upsert(ctx, naResult); err != nil {
+				uc.log.WithContext(ctx).Warnf("failed to sync result for item %s: %v", item.ID, err)
+			}
+		}
+	}
+
+	// 5. Hitung ulang summary
+	if _, err := uc.regulationAssRepo.RecalculateForSession(ctx, sessionID, regulationID); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetSession mengambil sesi berdasarkan ID.
@@ -164,7 +191,6 @@ func (uc *AssessmentUseCase) DeleteResult(ctx context.Context, id uuid.UUID) err
 
 // --- RegulationAssessment Use Cases ---
 
-// GetRegulationAssessments mengembalikan ringkasan assessment per regulasi dalam satu sesi.
 func (uc *AssessmentUseCase) GetRegulationAssessments(ctx context.Context, sessionID uuid.UUID) ([]*RegulationAssessment, error) {
 	return uc.regulationAssRepo.FindBySessionID(ctx, sessionID)
 }

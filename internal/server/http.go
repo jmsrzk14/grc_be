@@ -1,16 +1,16 @@
 package server
 
 import (
-	"net/http"
+	_ "grc_be/api/docs"
 	"grc_be/internal/conf"
 	"grc_be/internal/service"
-	_ "grc_be/api/docs"
+	"net/http"
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
-	"github.com/gorilla/mux"
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
@@ -25,7 +25,7 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 		opts = append(opts, khttp.Address(c.HTTP.Addr))
 	}
 	srv := khttp.NewServer(opts...)
-	
+
 	// Gunakan gorilla mux untuk routing REST yang fleksibel
 	router := mux.NewRouter()
 
@@ -33,7 +33,7 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	aAuth := router.PathPrefix("/api/v1/auth").Subrouter()
 	aAuth.HandleFunc("/login", auth.Login).Methods("POST")
 	aAuth.HandleFunc("/register", auth.Register).Methods("POST")
-	
+
 	// Tenant API
 	t := router.PathPrefix("/api/v1/tenants").Subrouter()
 	t.HandleFunc("", tenant.ListTenants).Methods("GET")
@@ -55,11 +55,13 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	r := router.PathPrefix("/api/v1/regulations").Subrouter()
 	r.HandleFunc("", reg.ListRegulations).Methods("GET")
 	r.HandleFunc("", reg.CreateRegulation).Methods("POST")
+	r.HandleFunc("/upsert", reg.UpsertRegulation).Methods("POST")
 	r.HandleFunc("/{id}", reg.GetRegulation).Methods("GET")
 	r.HandleFunc("/{id}", reg.UpdateRegulation).Methods("PUT")
 	r.HandleFunc("/{id}", reg.DeleteRegulation).Methods("DELETE")
 	r.HandleFunc("/{id}/items", reg.ListItems).Methods("GET")
 	r.HandleFunc("/{id}/items", reg.CreateItem).Methods("POST")
+	r.HandleFunc("/{id}/items/upsert", reg.UpsertItem).Methods("POST")
 	r.HandleFunc("/{id}/items/{item_id}", reg.GetItem).Methods("GET")
 	r.HandleFunc("/{id}/items/{item_id}", reg.UpdateItem).Methods("PUT")
 	r.HandleFunc("/{id}/items/{item_id}", reg.DeleteItem).Methods("DELETE")
@@ -78,6 +80,7 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	a.HandleFunc("/sessions/{id}/results", ass.SubmitResult).Methods("POST")
 	a.HandleFunc("/sessions/{id}/results/{result_id}", ass.DeleteResult).Methods("DELETE")
 	a.HandleFunc("/sessions/{id}/summaries", ass.GetSummaries).Methods("GET")
+	a.HandleFunc("/sessions/{id}/sync", ass.SyncSession).Methods("POST")
 
 	// Risk Management API
 	rc := router.PathPrefix("/api/v1/risk-categories").Subrouter()
@@ -100,9 +103,9 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	router.HandleFunc("/swagger.json", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./api/docs/swagger.json")
 	})
-	
+
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("/swagger.json"), 
+		httpSwagger.URL("/swagger.json"),
 	))
 
 	// CORS configuration

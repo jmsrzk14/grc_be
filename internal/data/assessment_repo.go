@@ -182,7 +182,7 @@ func (r *assessmentResultRepo) Upsert(ctx context.Context, result *biz.Assessmen
 	// Ambil data terbaru dari DB untuk memastikan ID dan field lainnya sinkron
 	var latest AssessmentResultModel
 	r.data.db.WithContext(ctx).First(&latest, "session_id = ? AND regulation_item_id = ?", result.SessionID, result.RegulationItemID)
-	
+
 	return toResultDomain(&latest), nil
 }
 
@@ -304,7 +304,7 @@ func (r *regulationAssessmentRepo) RecalculateForSession(ctx context.Context, se
 
 	// Upsert regulation assessment summary:
 	m := &RegulationAssessmentModel{
-		ID:           uuid.New(), 
+		ID:           uuid.New(),
 		RegulationID: regulationID,
 		SessionID:    sessionID,
 		AmountPass:   ra.AmountPass,

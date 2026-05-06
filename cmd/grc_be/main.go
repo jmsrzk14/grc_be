@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -82,10 +83,16 @@ func main() {
 
 	// Database Source override (Railway fallback)
 	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		log.Context(context.Background()).Infof("Database URL detected from environment: %s", dbURL)
 		if bc.Data != nil && bc.Data.Database != nil {
 			bc.Data.Database.Source = dbURL
 		}
+	} else {
+		log.Context(context.Background()).Info("No DATABASE_URL environment variable found, using config file.")
 	}
+
+	log.Context(context.Background()).Infof("Attempting to connect to database: %s", bc.Data.Database.Source)
+
 
 	// Manual Dependency Injection (tanpa Wire agar cepat)
 	d, cleanup, err := data.NewData(bc.Data, logger)

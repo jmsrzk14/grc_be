@@ -291,6 +291,32 @@ func (s *AssessmentService) GetSummaries(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusOK, results)
 }
 
+// SyncSession godoc
+// @Tags AssessmentsService
+// @Param id path string true "Session ID"
+// @Param regulation_id query string true "Regulation ID"
+// @Success 200 {object} map[string]string
+// @Router /api/v1/assessments/sessions/{id}/sync [post]
+func (s *AssessmentService) SyncSession(w http.ResponseWriter, r *http.Request) {
+	sessionID, err := parseUUIDFromRequest(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid session id")
+		return
+	}
+	regIDStr := r.URL.Query().Get("regulation_id")
+	regID, err := uuid.Parse(regIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid regulation id")
+		return
+	}
+
+	if err := s.uc.SynchronizeSession(r.Context(), sessionID, regID); err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "session synchronized"})
+}
+
 func toSessionResponse(s *biz.AssessmentSession) *SessionResponse {
 	return &SessionResponse{
 		ID:         s.ID.String(),

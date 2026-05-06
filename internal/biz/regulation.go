@@ -40,6 +40,24 @@ func (uc *RegulationUseCase) CreateRegulation(ctx context.Context, r *Regulation
 	return uc.repo.Create(ctx, r)
 }
 
+// UpsertRegulation mencari regulasi berdasarkan judul, jika ada diupdate, jika tidak dicreate.
+func (uc *RegulationUseCase) UpsertRegulation(ctx context.Context, r *Regulation) (*Regulation, error) {
+	if r.Title == "" {
+		return nil, fmt.Errorf("regulation title is required")
+	}
+
+	existing, err := uc.repo.FindByTitle(ctx, r.Title)
+	if err == nil {
+		// Update existing
+		r.ID = existing.ID
+		return uc.repo.Update(ctx, r)
+	}
+
+	// Create new
+	r.ID = uuid.New()
+	return uc.repo.Create(ctx, r)
+}
+
 // GetRegulation mengambil regulasi berdasarkan ID.
 func (uc *RegulationUseCase) GetRegulation(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*Regulation, error) {
 	return uc.repo.FindByID(ctx, id, tenantID)
@@ -67,6 +85,26 @@ func (uc *RegulationUseCase) CreateRegulationItem(ctx context.Context, item *Reg
 	if item.RegulationID == uuid.Nil {
 		return nil, fmt.Errorf("regulation_id is required")
 	}
+	item.ID = uuid.New()
+	return uc.itemRepo.Create(ctx, item)
+}
+
+// UpsertRegulationItem mencari item berdasarkan item_code dalam regulasi, jika ada diupdate, jika tidak dicreate.
+func (uc *RegulationUseCase) UpsertRegulationItem(ctx context.Context, item *RegulationItem) (*RegulationItem, error) {
+	if item.RegulationID == uuid.Nil {
+		return nil, fmt.Errorf("regulation_id is required")
+	}
+
+	if item.ItemCode != "" {
+		existing, err := uc.itemRepo.FindByRegulationIDAndItemCode(ctx, item.RegulationID, item.ItemCode)
+		if err == nil {
+			// Update existing
+			item.ID = existing.ID
+			return uc.itemRepo.Update(ctx, item)
+		}
+	}
+
+	// Create new
 	item.ID = uuid.New()
 	return uc.itemRepo.Create(ctx, item)
 }

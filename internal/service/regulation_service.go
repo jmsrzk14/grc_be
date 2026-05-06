@@ -52,6 +52,7 @@ type UpdateRegulationRequest struct {
 }
 
 type CreateRegulationItemRequest struct {
+	ItemCode        string   `json:"item_code"`
 	ReferenceNumber string   `json:"reference_number"`
 	Content         string   `json:"content"`
 	PropertyIDs     []string `json:"property_ids"`
@@ -61,6 +62,7 @@ type RegulationItemResponse struct {
 	ID              string   `json:"id"`
 	RegulationID    string   `json:"regulation_id"`
 	PropertyIDs     []string `json:"property_ids"`
+	ItemCode        string   `json:"item_code"`
 	ReferenceNumber string   `json:"reference_number"`
 	Content         string   `json:"content"`
 }
@@ -101,6 +103,31 @@ func (s *RegulationService) CreateRegulation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	respondJSON(w, http.StatusCreated, toRegulationResponse(result))
+}
+
+func (s *RegulationService) UpsertRegulation(w http.ResponseWriter, r *http.Request) {
+	var req CreateRegulationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	issuedDate, _ := time.Parse("2006-01-02", req.IssuedDate)
+	reg := &biz.Regulation{
+		Title:          req.Title,
+		RegulationType: req.RegulationType,
+		IssuedDate:     issuedDate,
+		Status:         req.Status,
+		Category:       req.Category,
+	}
+	if reg.Status == "" {
+		reg.Status = "Active"
+	}
+	result, err := s.uc.UpsertRegulation(r.Context(), reg)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	respondJSON(w, http.StatusOK, toRegulationResponse(result))
 }
 
 // GetRegulation godoc
@@ -243,6 +270,7 @@ func (s *RegulationService) CreateItem(w http.ResponseWriter, r *http.Request) {
 	item := &biz.RegulationItem{
 		RegulationID:    regID,
 		PropertyIDs:     propertyIDs,
+		ItemCode:        req.ItemCode,
 		ReferenceNumber: req.ReferenceNumber,
 		Content:         req.Content,
 	}
@@ -252,6 +280,38 @@ func (s *RegulationService) CreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusCreated, toItemResponse(result))
+}
+
+func (s *RegulationService) UpsertItem(w http.ResponseWriter, r *http.Request) {
+	regID, err := parseUUIDFromRequest(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid regulation id")
+		return
+	}
+	var req CreateRegulationItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	propertyIDs := make([]uuid.UUID, 0, len(req.PropertyIDs))
+	for _, idStr := range req.PropertyIDs {
+		if id, err := uuid.Parse(idStr); err == nil {
+			propertyIDs = append(propertyIDs, id)
+		}
+	}
+	item := &biz.RegulationItem{
+		RegulationID:    regID,
+		PropertyIDs:     propertyIDs,
+		ItemCode:        req.ItemCode,
+		ReferenceNumber: req.ReferenceNumber,
+		Content:         req.Content,
+	}
+	result, err := s.uc.UpsertRegulationItem(r.Context(), item)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	respondJSON(w, http.StatusOK, toItemResponse(result))
 }
 
 // ListItems godoc
@@ -334,6 +394,7 @@ func (s *RegulationService) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	item := &biz.RegulationItem{
 		ID:              id,
 		PropertyIDs:     propertyIDs,
+		ItemCode:        req.ItemCode,
 		ReferenceNumber: req.ReferenceNumber,
 		Content:         req.Content,
 	}
@@ -464,6 +525,7 @@ func toItemResponse(r *biz.RegulationItem) *RegulationItemResponse {
 		ID:              r.ID.String(),
 		RegulationID:    r.RegulationID.String(),
 		PropertyIDs:     propertyIDs,
+		ItemCode:        r.ItemCode,
 		ReferenceNumber: r.ReferenceNumber,
 		Content:         r.Content,
 	}

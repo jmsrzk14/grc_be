@@ -42,6 +42,7 @@ type RegulationRepo interface {
 	FindAll(ctx context.Context, tenantID uuid.UUID) ([]*Regulation, error)
 	Update(ctx context.Context, r *Regulation) (*Regulation, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	FindByTitle(ctx context.Context, title string) (*Regulation, error)
 }
 
 // RegulationItemRepo mendefinisikan kontrak akses data untuk RegulationItem.
@@ -54,6 +55,7 @@ type RegulationItemRepo interface {
 	FindExcludedByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*RegulationItem, error)
 	Update(ctx context.Context, item *RegulationItem) (*RegulationItem, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	FindByRegulationIDAndItemCode(ctx context.Context, regulationID uuid.UUID, itemCode string) (*RegulationItem, error)
 }
 
 // RegulationPropertyMappingRepo mendefinisikan kontrak untuk mapping Regulasi-Property.
