@@ -107,6 +107,7 @@ func main() {
 	regRepo := data.NewRegulationRepo(d, logger)
 	itemRepo := data.NewRegulationItemRepo(d, logger)
 	mappingRepo := data.NewRegulationPropertyMappingRepo(d, logger)
+	tenantRegRepo := data.NewTenantRegulationRepo(d, logger)
 	sessionRepo := data.NewAssessmentSessionRepo(d, logger)
 	resultRepo := data.NewAssessmentResultRepo(d, logger)
 	raRepo := data.NewRegulationAssessmentRepo(d, logger)
@@ -117,7 +118,7 @@ func main() {
 
 	tenantUC := biz.NewTenantUseCase(tenantRepo, logger)
 	propertyUC := biz.NewPropertyUseCase(propertyRepo, tpRepo, logger)
-	regUC := biz.NewRegulationUseCase(regRepo, itemRepo, mappingRepo, logger)
+	regUC := biz.NewRegulationUseCase(regRepo, itemRepo, mappingRepo, tenantRegRepo, logger)
 	assUC := biz.NewAssessmentUseCase(sessionRepo, resultRepo, raRepo, itemRepo, logger)
 	authUC := biz.NewAuthUseCase(authRepo, logger)
 	riskUC := biz.NewRiskUseCase(riskRepo, riskCatRepo, riskCatTenantRepo, logger)

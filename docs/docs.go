@@ -294,6 +294,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/assessments/sessions/{id}/sync": {
+            "post": {
+                "tags": [
+                    "AssessmentsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "regulation_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/properties": {
             "get": {
                 "produces": [
@@ -875,7 +909,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "List risk categories",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -899,7 +932,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "Create risk category",
                 "parameters": [
                     {
                         "description": "Risk Category",
@@ -930,7 +962,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "Get risk category",
                 "parameters": [
                     {
                         "type": "string",
@@ -960,7 +991,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "Update risk category",
                 "parameters": [
                     {
                         "type": "string",
@@ -993,7 +1023,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "Delete risk category",
                 "parameters": [
                     {
                         "type": "string",
@@ -1019,7 +1048,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "List risks",
                 "parameters": [
                     {
                         "type": "string",
@@ -1052,7 +1080,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "Create risk",
                 "parameters": [
                     {
                         "description": "Risk Item",
@@ -1083,7 +1110,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "Get risk",
                 "parameters": [
                     {
                         "type": "string",
@@ -1113,7 +1139,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "Update risk",
                 "parameters": [
                     {
                         "type": "string",
@@ -1146,7 +1171,6 @@ const docTemplate = `{
                 "tags": [
                     "RiskService"
                 ],
-                "summary": "Delete risk",
                 "parameters": [
                     {
                         "type": "string",
@@ -1404,25 +1428,16 @@ const docTemplate = `{
                 },
                 "risk_title": {
                     "type": "string"
-                },
-                "tenant_id": {
-                    "type": "string"
                 }
             }
         },
         "biz.RiskCategory": {
             "type": "object",
             "properties": {
-                "appetite": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "string"
                 },
                 "title": {
-                    "type": "string"
-                },
-                "tolerance": {
                     "type": "string"
                 }
             }
@@ -1450,6 +1465,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "content": {
+                    "type": "string"
+                },
+                "item_code": {
                     "type": "string"
                 },
                 "property_ids": {
@@ -1535,6 +1553,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "item_code": {
                     "type": "string"
                 },
                 "property_ids": {

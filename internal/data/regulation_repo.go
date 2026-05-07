@@ -31,6 +31,7 @@ func (r *regulationRepo) Create(ctx context.Context, reg *biz.Regulation) (*biz.
 		IssuedDate:     reg.IssuedDate,
 		Status:         reg.Status,
 		Category:       reg.Category,
+		CreatedAt:      reg.CreatedAt,
 	}
 	if result := r.data.db.WithContext(ctx).Create(m); result.Error != nil {
 		return nil, result.Error
@@ -48,6 +49,9 @@ func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID, tenantID uu
 	var res resultWithStats
 
 	db := r.data.db.WithContext(ctx).Table("regulations")
+	if tenantID != uuid.Nil {
+		db = db.Where("regulations.category != 'Internal' OR regulations.id IN (SELECT regulation_id FROM tenant_regulations WHERE tenant_id = ?)", tenantID)
+	}
 
 	if tenantID != uuid.Nil {
 		// Ambil session terbaru milik tenant
@@ -62,16 +66,23 @@ func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID, tenantID uu
 			Scan(&latestSession)
 
 		if latestSession.ID != uuid.Nil {
-			// Hitung amount dari tabel assessment_results berdasarkan session terbaru
-			subQuery := r.data.db.Table("assessment_results").
+			// Hitung amount secara dinamis.
+			subQuery := r.data.db.Table("regulation_items").
 				Select(
 					"regulation_items.regulation_id,"+
-						" COUNT(CASE WHEN assessment_results.compliance_status = 'YES' THEN 1 END) AS amount_pass,"+
-						" COUNT(CASE WHEN assessment_results.compliance_status = 'NO' THEN 1 END) AS amount_fail,"+
-						" COUNT(CASE WHEN assessment_results.compliance_status = 'N/A' THEN 1 END) AS amount_na",
+						" COUNT(CASE WHEN ar.compliance_status = 'YES' THEN 1 END) AS amount_pass,"+
+						" COUNT(CASE WHEN ar.compliance_status = 'NO' THEN 1 END) AS amount_fail,"+
+						" COUNT(CASE "+
+						"   WHEN ar.compliance_status = 'N/A' THEN 1 "+
+						"   WHEN ar.id IS NULL AND regulation_items.id IN (SELECT regulation_item_id FROM regulation_item_properties) AND EXISTS ("+
+						"     SELECT 1 FROM regulation_item_properties rip "+
+						"     WHERE rip.regulation_item_id = regulation_items.id "+
+						"     AND rip.property_id NOT IN (SELECT tp.property_id FROM tenants_properties tp WHERE tp.tenant_id = ?)"+
+						"   ) THEN 1 "+
+						"   ELSE NULL END) AS amount_na",
+					tenantID,
 				).
-				Joins("JOIN regulation_items ON regulation_items.id = assessment_results.regulation_item_id").
-				Where("assessment_results.session_id = ?", latestSession.ID).
+				Joins("LEFT JOIN assessment_results ar ON regulation_items.id = ar.regulation_item_id AND ar.session_id = ?", latestSession.ID).
 				Group("regulation_items.regulation_id")
 
 			db = db.
@@ -108,6 +119,9 @@ func (r *regulationRepo) FindAll(ctx context.Context, tenantID uuid.UUID) ([]*bi
 	var results []*resultWithStats
 
 	db := r.data.db.WithContext(ctx).Table("regulations")
+	if tenantID != uuid.Nil {
+		db = db.Where("regulations.category != 'Internal' OR regulations.id IN (SELECT regulation_id FROM tenant_regulations WHERE tenant_id = ?)", tenantID)
+	}
 
 	if tenantID != uuid.Nil {
 		// Ambil session terbaru milik tenant
@@ -122,16 +136,27 @@ func (r *regulationRepo) FindAll(ctx context.Context, tenantID uuid.UUID) ([]*bi
 			Scan(&latestSession)
 
 		if latestSession.ID != uuid.Nil {
-			// Hitung amount dari tabel assessment_results berdasarkan session terbaru
-			subQuery := r.data.db.Table("assessment_results").
+			// Hitung amount secara dinamis. 
+			// N/A dihitung jika:
+			// 1. Statusnya eksplisit 'N/A' di assessment_results
+			// 2. BELUM ada di assessment_results TAPI item tersebut memiliki mapping properti 
+			//    dan tidak ada yang cocok dengan properti milik tenant (tidak relevan).
+			subQuery := r.data.db.Table("regulation_items").
 				Select(
 					"regulation_items.regulation_id,"+
-						" COUNT(CASE WHEN assessment_results.compliance_status = 'YES' THEN 1 END) AS amount_pass,"+
-						" COUNT(CASE WHEN assessment_results.compliance_status = 'NO' THEN 1 END) AS amount_fail,"+
-						" COUNT(CASE WHEN assessment_results.compliance_status = 'N/A' THEN 1 END) AS amount_na",
+						" COUNT(CASE WHEN ar.compliance_status = 'YES' THEN 1 END) AS amount_pass,"+
+						" COUNT(CASE WHEN ar.compliance_status = 'NO' THEN 1 END) AS amount_fail,"+
+						" COUNT(CASE "+
+						"   WHEN ar.compliance_status = 'N/A' THEN 1 "+
+						"   WHEN ar.id IS NULL AND regulation_items.id IN (SELECT regulation_item_id FROM regulation_item_properties) AND EXISTS ("+
+						"     SELECT 1 FROM regulation_item_properties rip "+
+						"     WHERE rip.regulation_item_id = regulation_items.id "+
+						"     AND rip.property_id NOT IN (SELECT tp.property_id FROM tenants_properties tp WHERE tp.tenant_id = ?)"+
+						"   ) THEN 1 "+
+						"   ELSE NULL END) AS amount_na",
+					tenantID,
 				).
-				Joins("JOIN regulation_items ON regulation_items.id = assessment_results.regulation_item_id").
-				Where("assessment_results.session_id = ?", latestSession.ID).
+				Joins("LEFT JOIN assessment_results ar ON regulation_items.id = ar.regulation_item_id AND ar.session_id = ?", latestSession.ID).
 				Group("regulation_items.regulation_id")
 
 			db = db.
@@ -168,6 +193,7 @@ func (r *regulationRepo) Update(ctx context.Context, reg *biz.Regulation) (*biz.
 		IssuedDate:     reg.IssuedDate,
 		Status:         reg.Status,
 		Category:       reg.Category,
+		CreatedAt:      reg.CreatedAt,
 	}
 	if result := r.data.db.WithContext(ctx).Save(m); result.Error != nil {
 		return nil, result.Error
@@ -198,6 +224,7 @@ func toRegulationDomain(m *RegulationModel) *biz.Regulation {
 		IssuedDate:     m.IssuedDate,
 		Status:         m.Status,
 		Category:       m.Category,
+		CreatedAt:      m.CreatedAt,
 	}
 }
 
@@ -262,11 +289,12 @@ func (r *regulationItemRepo) FindByRegulationID(ctx context.Context, regulationI
 		// Include items with NO properties OR items that match the tenant's properties
 		db = db.Where("regulation_items.regulation_id = ?", regulationID).
 			Where(`regulation_items.id NOT IN (SELECT regulation_item_id FROM regulation_item_properties) OR 
-			       regulation_items.id IN (
-				       SELECT rip.regulation_item_id 
-				       FROM regulation_item_properties rip 
-				       JOIN tenants_properties tp ON rip.property_id = tp.property_id 
-				       WHERE tp.tenant_id = ?
+			       NOT EXISTS (
+				       SELECT 1 FROM regulation_item_properties rip 
+				       WHERE rip.regulation_item_id = regulation_items.id 
+				       AND rip.property_id NOT IN (
+					       SELECT tp.property_id FROM tenants_properties tp WHERE tp.tenant_id = ?
+				       )
 			       )`, tenantID)
 	} else {
 		db = db.Where("regulation_id = ?", regulationID)
@@ -292,11 +320,12 @@ func (r *regulationItemRepo) FindExcludedByTenantID(ctx context.Context, tenantI
 	// yaitu items yang property-nya tidak ada di tenants_properties untuk tenant ini
 	err := r.data.db.WithContext(ctx).
 		Preload("Properties").
-		Where(`regulation_items.id NOT IN (
-			SELECT DISTINCT rip.regulation_item_id
-			FROM regulation_item_properties rip
-			JOIN tenants_properties tp ON rip.property_id = tp.property_id
-			WHERE tp.tenant_id = ?
+		Where(`regulation_items.id IN (SELECT regulation_item_id FROM regulation_item_properties) AND EXISTS (
+			SELECT 1 FROM regulation_item_properties rip
+			WHERE rip.regulation_item_id = regulation_items.id
+			AND rip.property_id NOT IN (
+				SELECT tp.property_id FROM tenants_properties tp WHERE tp.tenant_id = ?
+			)
 		)`, tenantID).
 		Find(&models).Error
 
@@ -324,7 +353,13 @@ func (r *regulationItemRepo) Update(ctx context.Context, item *biz.RegulationIte
 	}
 
 	err := r.data.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(m).Error; err != nil {
+		// Safeguard: don't overwrite regulation_id with zero value
+		db := tx.Model(m)
+		if item.RegulationID == uuid.Nil {
+			db = db.Omit("regulation_id")
+		}
+
+		if err := db.Save(m).Error; err != nil {
 			return err
 		}
 		return tx.Model(m).Association("Properties").Replace(props)
@@ -364,6 +399,52 @@ func toRegulationItemDomain(m *RegulationItemModel) *biz.RegulationItem {
 		ReferenceNumber: m.ReferenceNumber,
 		Content:         m.Content,
 	}
+}
+
+// --- TenantRegulation Repository Implementation ---
+
+type tenantRegulationRepo struct {
+	data *Data
+	log  *log.Helper
+}
+
+func NewTenantRegulationRepo(data *Data, logger log.Logger) biz.TenantRegulationRepo {
+	return &tenantRegulationRepo{data: data, log: log.NewHelper(logger)}
+}
+
+func (r *tenantRegulationRepo) Create(ctx context.Context, tr *biz.TenantRegulation) (*biz.TenantRegulation, error) {
+	m := &TenantRegulationModel{
+		ID:           tr.ID,
+		TenantID:     tr.TenantID,
+		RegulationID: tr.RegulationID,
+	}
+	if result := r.data.db.WithContext(ctx).Create(m); result.Error != nil {
+		return nil, result.Error
+	}
+	return tr, nil
+}
+
+func (r *tenantRegulationRepo) FindByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*biz.TenantRegulation, error) {
+	var models []*TenantRegulationModel
+	if result := r.data.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Find(&models); result.Error != nil {
+		return nil, result.Error
+	}
+	results := make([]*biz.TenantRegulation, 0, len(models))
+	for _, m := range models {
+		results = append(results, &biz.TenantRegulation{
+			ID:           m.ID,
+			TenantID:     m.TenantID,
+			RegulationID: m.RegulationID,
+			CreatedAt:    m.CreatedAt,
+		})
+	}
+	return results, nil
+}
+
+func (r *tenantRegulationRepo) Delete(ctx context.Context, tenantID, regulationID uuid.UUID) error {
+	return r.data.db.WithContext(ctx).
+		Where("tenant_id = ? AND regulation_id = ?", tenantID, regulationID).
+		Delete(&TenantRegulationModel{}).Error
 }
 
 // --- RegulationPropertyMapping Repository Implementation ---

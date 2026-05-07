@@ -45,6 +45,7 @@ type RegulationModel struct {
 	IssuedDate     time.Time
 	Status         string `gorm:"not null;default:'Active'"` // Active, Revoked
 	Category       string `gorm:"not null;default:'External'"`
+	CreatedAt      time.Time
 }
 
 func (RegulationModel) TableName() string { return "regulations" }
@@ -119,6 +120,16 @@ type UserModel struct {
 }
 
 func (UserModel) TableName() string { return "users" }
+
+// TenantRegulationModel adalah model GORM untuk tabel tenant_regulations.
+type TenantRegulationModel struct {
+	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
+	TenantID     uuid.UUID `gorm:"type:uuid;not null;index"`
+	RegulationID uuid.UUID `gorm:"type:uuid;not null;index"`
+	CreatedAt    time.Time
+}
+
+func (TenantRegulationModel) TableName() string { return "tenant_regulations" }
 
 // RiskCategoryModel adalah model GORM untuk tabel risk_categories.
 type RiskCategoryModel struct {

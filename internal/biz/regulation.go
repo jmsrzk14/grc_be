@@ -13,6 +13,7 @@ type RegulationUseCase struct {
 	repo        RegulationRepo
 	itemRepo    RegulationItemRepo
 	mappingRepo RegulationPropertyMappingRepo
+	tenantRegRepo TenantRegulationRepo
 	log         *log.Helper
 }
 
@@ -21,12 +22,14 @@ func NewRegulationUseCase(
 	repo RegulationRepo,
 	itemRepo RegulationItemRepo,
 	mappingRepo RegulationPropertyMappingRepo,
+	tenantRegRepo TenantRegulationRepo,
 	logger log.Logger,
 ) *RegulationUseCase {
 	return &RegulationUseCase{
 		repo:        repo,
 		itemRepo:    itemRepo,
 		mappingRepo: mappingRepo,
+		tenantRegRepo: tenantRegRepo,
 		log:         log.NewHelper(logger),
 	}
 }
@@ -37,7 +40,24 @@ func (uc *RegulationUseCase) CreateRegulation(ctx context.Context, r *Regulation
 		return nil, fmt.Errorf("regulation title is required")
 	}
 	r.ID = uuid.New()
-	return uc.repo.Create(ctx, r)
+	created, err := uc.repo.Create(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Jika kategori internal dan ada tenant_id, simpan mapping ke tenant_regulation
+	if created.Category == "Internal" && created.TenantID != uuid.Nil {
+		_, err = uc.tenantRegRepo.Create(ctx, &TenantRegulation{
+			ID:           uuid.New(),
+			TenantID:     created.TenantID,
+			RegulationID: created.ID,
+		})
+		if err != nil {
+			uc.log.Errorf("failed to create tenant regulation mapping: %v", err)
+		}
+	}
+
+	return created, nil
 }
 
 // UpsertRegulation mencari regulasi berdasarkan judul, jika ada diupdate, jika tidak dicreate.
@@ -55,7 +75,24 @@ func (uc *RegulationUseCase) UpsertRegulation(ctx context.Context, r *Regulation
 
 	// Create new
 	r.ID = uuid.New()
-	return uc.repo.Create(ctx, r)
+	created, err := uc.repo.Create(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Jika kategori internal dan ada tenant_id, simpan mapping ke tenant_regulation
+	if created.Category == "Internal" && created.TenantID != uuid.Nil {
+		_, err = uc.tenantRegRepo.Create(ctx, &TenantRegulation{
+			ID:           uuid.New(),
+			TenantID:     created.TenantID,
+			RegulationID: created.ID,
+		})
+		if err != nil {
+			uc.log.Errorf("failed to create tenant regulation mapping: %v", err)
+		}
+	}
+
+	return created, nil
 }
 
 // GetRegulation mengambil regulasi berdasarkan ID.

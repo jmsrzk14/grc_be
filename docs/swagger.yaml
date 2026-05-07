@@ -45,18 +45,12 @@ definitions:
         type: string
       risk_title:
         type: string
-      tenant_id:
-        type: string
     type: object
   biz.RiskCategory:
     properties:
-      appetite:
-        type: string
       id:
         type: string
       title:
-        type: string
-      tolerance:
         type: string
     type: object
   service.AddMappingRequest:
@@ -74,6 +68,8 @@ definitions:
   service.CreateRegulationItemRequest:
     properties:
       content:
+        type: string
+      item_code:
         type: string
       property_ids:
         items:
@@ -129,6 +125,8 @@ definitions:
       content:
         type: string
       id:
+        type: string
+      item_code:
         type: string
       property_ids:
         items:
@@ -429,6 +427,28 @@ paths:
             items:
               $ref: '#/definitions/biz.RegulationAssessment'
             type: array
+      tags:
+      - AssessmentsService
+  /api/v1/assessments/sessions/{id}/sync:
+    post:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regulation ID
+        in: query
+        name: regulation_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       tags:
       - AssessmentsService
   /api/v1/properties:
@@ -810,7 +830,6 @@ paths:
             items:
               $ref: '#/definitions/biz.RiskCategory'
             type: array
-      summary: List risk categories
       tags:
       - RiskService
     post:
@@ -831,7 +850,6 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/biz.RiskCategory'
-      summary: Create risk category
       tags:
       - RiskService
   /api/v1/risk-categories/{id}:
@@ -846,7 +864,6 @@ paths:
       responses:
         "204":
           description: No Content
-      summary: Delete risk category
       tags:
       - RiskService
     get:
@@ -864,7 +881,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/biz.RiskCategory'
-      summary: Get risk category
       tags:
       - RiskService
     put:
@@ -890,7 +906,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/biz.RiskCategory'
-      summary: Update risk category
       tags:
       - RiskService
   /api/v1/risks:
@@ -911,7 +926,6 @@ paths:
             items:
               $ref: '#/definitions/biz.Risk'
             type: array
-      summary: List risks
       tags:
       - RiskService
     post:
@@ -932,7 +946,6 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/biz.Risk'
-      summary: Create risk
       tags:
       - RiskService
   /api/v1/risks/{id}:
@@ -947,7 +960,6 @@ paths:
       responses:
         "204":
           description: No Content
-      summary: Delete risk
       tags:
       - RiskService
     get:
@@ -965,7 +977,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/biz.Risk'
-      summary: Get risk
       tags:
       - RiskService
     put:
@@ -991,7 +1002,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/biz.Risk'
-      summary: Update risk
       tags:
       - RiskService
   /api/v1/tenants:

@@ -29,6 +29,9 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	// Gunakan gorilla mux untuk routing REST yang fleksibel
 	router := mux.NewRouter()
 
+	// Apply AuthMiddleware to all routes
+	router.Use(AuthMiddleware)
+
 	// Auth API
 	aAuth := router.PathPrefix("/api/v1/auth").Subrouter()
 	aAuth.HandleFunc("/login", auth.Login).Methods("POST")
@@ -37,37 +40,37 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	// Tenant API
 	t := router.PathPrefix("/api/v1/tenants").Subrouter()
 	t.HandleFunc("", tenant.ListTenants).Methods("GET")
-	t.HandleFunc("", tenant.CreateTenant).Methods("POST")
+	t.HandleFunc("", AdminOnly(tenant.CreateTenant)).Methods("POST")
 	t.HandleFunc("/{id}", tenant.GetTenant).Methods("GET")
-	t.HandleFunc("/{id}", tenant.UpdateTenant).Methods("PUT")
-	t.HandleFunc("/{id}", tenant.DeleteTenant).Methods("DELETE")
+	t.HandleFunc("/{id}", AdminOnly(tenant.UpdateTenant)).Methods("PUT")
+	t.HandleFunc("/{id}", AdminOnly(tenant.DeleteTenant)).Methods("DELETE")
 	t.HandleFunc("/{id}/properties", tenant.ListTenantProperties).Methods("GET")
 
 	// Property API
 	p := router.PathPrefix("/api/v1/properties").Subrouter()
 	p.HandleFunc("", property.ListProperties).Methods("GET")
-	p.HandleFunc("", property.CreateProperty).Methods("POST")
+	p.HandleFunc("", AdminOnly(property.CreateProperty)).Methods("POST")
 	p.HandleFunc("/{id}", property.GetProperty).Methods("GET")
-	p.HandleFunc("/{id}", property.UpdateProperty).Methods("PUT")
-	p.HandleFunc("/{id}", property.DeleteProperty).Methods("DELETE")
+	p.HandleFunc("/{id}", AdminOnly(property.UpdateProperty)).Methods("PUT")
+	p.HandleFunc("/{id}", AdminOnly(property.DeleteProperty)).Methods("DELETE")
 
 	// Regulation API
-	r := router.PathPrefix("/api/v1/regulations").Subrouter()
-	r.HandleFunc("", reg.ListRegulations).Methods("GET")
-	r.HandleFunc("", reg.CreateRegulation).Methods("POST")
-	r.HandleFunc("/upsert", reg.UpsertRegulation).Methods("POST")
-	r.HandleFunc("/{id}", reg.GetRegulation).Methods("GET")
-	r.HandleFunc("/{id}", reg.UpdateRegulation).Methods("PUT")
-	r.HandleFunc("/{id}", reg.DeleteRegulation).Methods("DELETE")
-	r.HandleFunc("/{id}/items", reg.ListItems).Methods("GET")
-	r.HandleFunc("/{id}/items", reg.CreateItem).Methods("POST")
-	r.HandleFunc("/{id}/items/upsert", reg.UpsertItem).Methods("POST")
-	r.HandleFunc("/{id}/items/{item_id}", reg.GetItem).Methods("GET")
-	r.HandleFunc("/{id}/items/{item_id}", reg.UpdateItem).Methods("PUT")
-	r.HandleFunc("/{id}/items/{item_id}", reg.DeleteItem).Methods("DELETE")
-	r.HandleFunc("/{id}/mappings", reg.ListMappings).Methods("GET")
-	r.HandleFunc("/{id}/mappings", reg.AddMapping).Methods("POST")
-	r.HandleFunc("/{id}/mappings/{mapping_id}", reg.DeleteMapping).Methods("DELETE")
+	regR := router.PathPrefix("/api/v1/regulations").Subrouter()
+	regR.HandleFunc("", reg.ListRegulations).Methods("GET")
+	regR.HandleFunc("", reg.CreateRegulation).Methods("POST")
+	regR.HandleFunc("/upsert", AdminOnly(reg.UpsertRegulation)).Methods("POST")
+	regR.HandleFunc("/{id}", reg.GetRegulation).Methods("GET")
+	regR.HandleFunc("/{id}", reg.UpdateRegulation).Methods("PUT")
+	regR.HandleFunc("/{id}", reg.DeleteRegulation).Methods("DELETE")
+	regR.HandleFunc("/{id}/items", reg.ListItems).Methods("GET")
+	regR.HandleFunc("/{id}/items", AdminOnly(reg.CreateItem)).Methods("POST")
+	regR.HandleFunc("/{id}/items/upsert", AdminOnly(reg.UpsertItem)).Methods("POST")
+	regR.HandleFunc("/{id}/items/{item_id}", reg.GetItem).Methods("GET")
+	regR.HandleFunc("/{id}/items/{item_id}", AdminOnly(reg.UpdateItem)).Methods("PUT")
+	regR.HandleFunc("/{id}/items/{item_id}", AdminOnly(reg.DeleteItem)).Methods("DELETE")
+	regR.HandleFunc("/{id}/mappings", reg.ListMappings).Methods("GET")
+	regR.HandleFunc("/{id}/mappings", AdminOnly(reg.AddMapping)).Methods("POST")
+	regR.HandleFunc("/{id}/mappings/{mapping_id}", AdminOnly(reg.DeleteMapping)).Methods("DELETE")
 
 	// Assessment API
 	a := router.PathPrefix("/api/v1/assessments").Subrouter()
@@ -85,10 +88,10 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	// Risk Management API
 	rc := router.PathPrefix("/api/v1/risk-categories").Subrouter()
 	rc.HandleFunc("", risk.ListCategories).Methods("GET")
-	rc.HandleFunc("", risk.CreateCategory).Methods("POST")
+	rc.HandleFunc("", AdminOnly(risk.CreateCategory)).Methods("POST")
 	rc.HandleFunc("/{id}", risk.GetCategory).Methods("GET")
-	rc.HandleFunc("/{id}", risk.UpdateCategory).Methods("PUT")
-	rc.HandleFunc("/{id}", risk.DeleteCategory).Methods("DELETE")
+	rc.HandleFunc("/{id}", AdminOnly(risk.UpdateCategory)).Methods("PUT")
+	rc.HandleFunc("/{id}", AdminOnly(risk.DeleteCategory)).Methods("DELETE")
 	rc.HandleFunc("/{id}/settings", risk.GetCategoryTenant).Methods("GET")
 	rc.HandleFunc("/{id}/settings", risk.SaveCategoryTenant).Methods("POST")
 

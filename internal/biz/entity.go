@@ -42,9 +42,11 @@ type Regulation struct {
 	IssuedDate     time.Time
 	Status         string // Active, Revoked
 	Category       string // Internal, External
+	TenantID       uuid.UUID // ID tenant yang menginput (untuk internal)
 	AmountPass     int
 	AmountFail     int
 	AmountNA       int
+	CreatedAt      time.Time
 }
 
 // RegulationItem merepresentasikan item/pasal dalam suatu regulasi.
@@ -62,6 +64,14 @@ type RegulationPropertyMapping struct {
 	ID           uuid.UUID
 	RegulationID uuid.UUID
 	PropertyID   uuid.UUID
+}
+
+// TenantRegulation adalah mapping many-to-many antara Tenant dan Regulation (untuk regulasi internal).
+type TenantRegulation struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	RegulationID uuid.UUID
+	CreatedAt    time.Time
 }
 
 // --- Assessment Domain ---

@@ -58,12 +58,17 @@ type RegulationItemRepo interface {
 	FindByRegulationIDAndItemCode(ctx context.Context, regulationID uuid.UUID, itemCode string) (*RegulationItem, error)
 }
 
-// RegulationPropertyMappingRepo mendefinisikan kontrak untuk mapping Regulasi-Property.
 type RegulationPropertyMappingRepo interface {
 	Create(ctx context.Context, mapping *RegulationPropertyMapping) (*RegulationPropertyMapping, error)
 	FindByRegulationID(ctx context.Context, regulationID uuid.UUID) ([]*RegulationPropertyMapping, error)
 	FindByPropertyID(ctx context.Context, propertyID uuid.UUID) ([]*RegulationPropertyMapping, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type TenantRegulationRepo interface {
+	Create(ctx context.Context, tr *TenantRegulation) (*TenantRegulation, error)
+	FindByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*TenantRegulation, error)
+	Delete(ctx context.Context, tenantID, regulationID uuid.UUID) error
 }
 
 // --- Assessment Repository Interface ---

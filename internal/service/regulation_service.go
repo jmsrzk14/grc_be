@@ -29,6 +29,7 @@ type CreateRegulationRequest struct {
 	IssuedDate     string `json:"issued_date"`
 	Status         string `json:"status"`
 	Category       string `json:"category"`
+	TenantID       string `json:"tenant_id"`
 }
 
 type RegulationResponse struct {
@@ -71,6 +72,21 @@ type AddMappingRequest struct {
 	PropertyID string `json:"property_id"`
 }
 
+// --- Helpers ---
+
+func (s *RegulationService) checkPermission(r *http.Request, category string) bool {
+	claims, ok := r.Context().Value(biz.UserKey).(*biz.Claims)
+	if !ok {
+		return false
+	}
+	// SuperAdmin and Admin can do anything
+	if claims.Role == "SuperAdmin" || claims.Role == "Admin" {
+		return true
+	}
+	// Regular users can only manage Internal regulations
+	return category == "Internal"
+}
+
 // --- Regulation Handlers ---
 
 // CreateRegulation godoc
@@ -94,9 +110,17 @@ func (s *RegulationService) CreateRegulation(w http.ResponseWriter, r *http.Requ
 		Status:         req.Status,
 		Category:       req.Category,
 	}
+	if req.TenantID != "" {
+		reg.TenantID, _ = uuid.Parse(req.TenantID)
+	}
 	if reg.Status == "" {
 		reg.Status = "Active"
 	}
+	if !s.checkPermission(r, reg.Category) {
+		respondError(w, http.StatusForbidden, "forbidden: only admin can manage external regulations")
+		return
+	}
+
 	result, err := s.uc.CreateRegulation(r.Context(), reg)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
@@ -118,6 +142,9 @@ func (s *RegulationService) UpsertRegulation(w http.ResponseWriter, r *http.Requ
 		IssuedDate:     issuedDate,
 		Status:         req.Status,
 		Category:       req.Category,
+	}
+	if req.TenantID != "" {
+		reg.TenantID, _ = uuid.Parse(req.TenantID)
 	}
 	if reg.Status == "" {
 		reg.Status = "Active"
@@ -214,6 +241,11 @@ func (s *RegulationService) UpdateRegulation(w http.ResponseWriter, r *http.Requ
 		Status:         req.Status,
 		Category:       req.Category,
 	}
+	if !s.checkPermission(r, reg.Category) {
+		respondError(w, http.StatusForbidden, "forbidden: only admin can manage external regulations")
+		return
+	}
+
 	result, err := s.uc.UpdateRegulation(r.Context(), reg)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
@@ -233,6 +265,22 @@ func (s *RegulationService) DeleteRegulation(w http.ResponseWriter, r *http.Requ
 		respondError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
+	// Check permission by fetching the regulation first
+	existing, err := s.uc.GetRegulation(r.Context(), id, uuid.Nil)
+	if err != nil {
+		if errors.Is(err, biz.ErrNotFound) {
+			respondError(w, http.StatusNotFound, "regulation not found")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if !s.checkPermission(r, existing.Category) {
+		respondError(w, http.StatusForbidden, "forbidden: only admin can delete external regulations")
+		return
+	}
+
 	if err := s.uc.DeleteRegulation(r.Context(), id); err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -375,6 +423,11 @@ func (s *RegulationService) GetItem(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} RegulationItemResponse
 // @Router /api/v1/regulations/{id}/items/{item_id} [put]
 func (s *RegulationService) UpdateItem(w http.ResponseWriter, r *http.Request) {
+	regID, err := parseUUIDFromRequest(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid regulation id")
+		return
+	}
 	id, err := parseUUIDFromRequest(r, "item_id")
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "invalid item id")
@@ -393,6 +446,7 @@ func (s *RegulationService) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	}
 	item := &biz.RegulationItem{
 		ID:              id,
+		RegulationID:    regID,
 		PropertyIDs:     propertyIDs,
 		ItemCode:        req.ItemCode,
 		ReferenceNumber: req.ReferenceNumber,

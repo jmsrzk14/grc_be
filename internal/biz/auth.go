@@ -5,11 +5,25 @@ import (
 	"errors"
 	"time"
 
+	"github.com/go-kratos/kratos/v2/log"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/go-kratos/kratos/v2/log"
 )
+
+type contextKey string
+
+const (
+	UserKey contextKey = "user"
+)
+
+type Claims struct {
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+	TenantID string `json:"tenant_id"`
+	Role     string `json:"role"`
+	jwt.RegisteredClaims
+}
 
 var (
 	ErrUnauthorized = errors.New("unauthorized")
