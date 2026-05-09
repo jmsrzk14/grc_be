@@ -53,7 +53,7 @@ type UpdateRegulationRequest struct {
 }
 
 type CreateRegulationItemRequest struct {
-	ItemCode        string   `json:"item_code"`
+	ItemCode        int      `json:"item_code"`
 	ReferenceNumber string   `json:"reference_number"`
 	Content         string   `json:"content"`
 	PropertyIDs     []string `json:"property_ids"`
@@ -63,7 +63,7 @@ type RegulationItemResponse struct {
 	ID              string   `json:"id"`
 	RegulationID    string   `json:"regulation_id"`
 	PropertyIDs     []string `json:"property_ids"`
-	ItemCode        string   `json:"item_code"`
+	ItemCode        int      `json:"item_code"`
 	ReferenceNumber string   `json:"reference_number"`
 	Content         string   `json:"content"`
 }

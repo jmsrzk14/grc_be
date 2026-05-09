@@ -54,7 +54,7 @@ type RegulationItem struct {
 	ID              uuid.UUID
 	RegulationID    uuid.UUID
 	PropertyIDs     []uuid.UUID
-	ItemCode        string // Manual ID/Code e.g., '1.1'
+	ItemCode        int    // Manual ID/Code e.g., 1
 	ReferenceNumber string // e.g., 'Pasal 1 ayat 1'
 	Content         string
 }

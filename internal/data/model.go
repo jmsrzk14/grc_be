@@ -55,7 +55,7 @@ type RegulationItemModel struct {
 	ID              uuid.UUID       `gorm:"type:uuid;primaryKey"`
 	RegulationID    uuid.UUID       `gorm:"type:uuid;not null;index"`
 	Properties      []PropertyModel `gorm:"many2many:regulation_item_properties;foreignKey:ID;joinForeignKey:regulation_item_id;References:ID;joinReferences:property_id"`
-	ItemCode        string          `gorm:"size:100"` // e.g., '1.1'
+	ItemCode        int             `gorm:"type:int"` // e.g., 1
 	ReferenceNumber string          `gorm:"not null"` // e.g., 'Pasal 1 ayat 1'
 	Content         string          `gorm:"type:text"`
 }

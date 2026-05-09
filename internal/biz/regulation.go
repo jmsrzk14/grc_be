@@ -122,6 +122,21 @@ func (uc *RegulationUseCase) CreateRegulationItem(ctx context.Context, item *Reg
 	if item.RegulationID == uuid.Nil {
 		return nil, fmt.Errorf("regulation_id is required")
 	}
+
+	// Fetch regulation to check category
+	reg, err := uc.repo.FindByID(ctx, item.RegulationID, uuid.Nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if reg.Category == "Internal" && item.ItemCode == 0 {
+		max, err := uc.itemRepo.GetMaxItemCode(ctx, item.RegulationID)
+		if err != nil {
+			return nil, err
+		}
+		item.ItemCode = max + 1
+	}
+
 	item.ID = uuid.New()
 	return uc.itemRepo.Create(ctx, item)
 }
@@ -132,13 +147,26 @@ func (uc *RegulationUseCase) UpsertRegulationItem(ctx context.Context, item *Reg
 		return nil, fmt.Errorf("regulation_id is required")
 	}
 
-	if item.ItemCode != "" {
+	// Fetch regulation to check category
+	reg, err := uc.repo.FindByID(ctx, item.RegulationID, uuid.Nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if item.ItemCode != 0 {
 		existing, err := uc.itemRepo.FindByRegulationIDAndItemCode(ctx, item.RegulationID, item.ItemCode)
 		if err == nil {
 			// Update existing
 			item.ID = existing.ID
 			return uc.itemRepo.Update(ctx, item)
 		}
+	} else if reg.Category == "Internal" {
+		// Auto-increment for internal if ItemCode is 0
+		max, err := uc.itemRepo.GetMaxItemCode(ctx, item.RegulationID)
+		if err != nil {
+			return nil, err
+		}
+		item.ItemCode = max + 1
 	}
 
 	// Create new

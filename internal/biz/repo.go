@@ -55,7 +55,8 @@ type RegulationItemRepo interface {
 	FindExcludedByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*RegulationItem, error)
 	Update(ctx context.Context, item *RegulationItem) (*RegulationItem, error)
 	Delete(ctx context.Context, id uuid.UUID) error
-	FindByRegulationIDAndItemCode(ctx context.Context, regulationID uuid.UUID, itemCode string) (*RegulationItem, error)
+	FindByRegulationIDAndItemCode(ctx context.Context, regulationID uuid.UUID, itemCode int) (*RegulationItem, error)
+	GetMaxItemCode(ctx context.Context, regulationID uuid.UUID) (int, error)
 }
 
 type RegulationPropertyMappingRepo interface {

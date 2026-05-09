@@ -166,10 +166,10 @@ func (r *regulationRepo) FindAll(ctx context.Context, tenantID uuid.UUID) ([]*bi
 			db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
 		}
 	} else {
-		db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
+		db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na").Order("created_at DESC")
 	}
 
-	if err := db.Scan(&results).Error; err != nil {
+	if err := db.Order("regulations.created_at DESC").Scan(&results).Error; err != nil {
 		r.log.Errorf("failed to list regulations: %v", err)
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func (r *regulationItemRepo) FindByID(ctx context.Context, id uuid.UUID) (*biz.R
 
 func (r *regulationItemRepo) FindByRegulationID(ctx context.Context, regulationID uuid.UUID, tenantID uuid.UUID) ([]*biz.RegulationItem, error) {
 	var models []*RegulationItemModel
-	db := r.data.db.WithContext(ctx).Preload("Properties").Order("reference_number ASC")
+	db := r.data.db.WithContext(ctx).Preload("Properties").Order("item_code ASC")
 
 	if tenantID != uuid.Nil {
 		// Include items with NO properties OR items that match the tenant's properties
@@ -375,7 +375,7 @@ func (r *regulationItemRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.data.db.WithContext(ctx).Delete(&RegulationItemModel{}, "id = ?", id).Error
 }
 
-func (r *regulationItemRepo) FindByRegulationIDAndItemCode(ctx context.Context, regulationID uuid.UUID, itemCode string) (*biz.RegulationItem, error) {
+func (r *regulationItemRepo) FindByRegulationIDAndItemCode(ctx context.Context, regulationID uuid.UUID, itemCode int) (*biz.RegulationItem, error) {
 	var m RegulationItemModel
 	if err := r.data.db.WithContext(ctx).Preload("Properties").Where("regulation_id = ? AND item_code = ?", regulationID, itemCode).First(&m).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -384,6 +384,15 @@ func (r *regulationItemRepo) FindByRegulationIDAndItemCode(ctx context.Context, 
 		return nil, err
 	}
 	return toRegulationItemDomain(&m), nil
+}
+
+func (r *regulationItemRepo) GetMaxItemCode(ctx context.Context, regulationID uuid.UUID) (int, error) {
+	var max int
+	err := r.data.db.WithContext(ctx).Table("regulation_items").
+		Where("regulation_id = ?", regulationID).
+		Select("COALESCE(MAX(item_code), 0)").
+		Scan(&max).Error
+	return max, err
 }
 
 func toRegulationItemDomain(m *RegulationItemModel) *biz.RegulationItem {
