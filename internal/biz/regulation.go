@@ -3,6 +3,7 @@ package biz
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/uuid"
@@ -10,11 +11,14 @@ import (
 
 // RegulationUseCase menangani logika bisnis untuk Regulation.
 type RegulationUseCase struct {
-	repo        RegulationRepo
-	itemRepo    RegulationItemRepo
-	mappingRepo RegulationPropertyMappingRepo
-	tenantRegRepo TenantRegulationRepo
-	log         *log.Helper
+	repo              RegulationRepo
+	itemRepo          RegulationItemRepo
+	mappingRepo       RegulationPropertyMappingRepo
+	tenantRegRepo     TenantRegulationRepo
+	sessionRepo       AssessmentSessionRepo
+	resultRepo        AssessmentResultRepo
+	regulationAssRepo RegulationAssessmentRepo
+	log               *log.Helper
 }
 
 // NewRegulationUseCase membuat instance baru.
@@ -23,14 +27,20 @@ func NewRegulationUseCase(
 	itemRepo RegulationItemRepo,
 	mappingRepo RegulationPropertyMappingRepo,
 	tenantRegRepo TenantRegulationRepo,
+	sessionRepo AssessmentSessionRepo,
+	resultRepo AssessmentResultRepo,
+	regulationAssRepo RegulationAssessmentRepo,
 	logger log.Logger,
 ) *RegulationUseCase {
 	return &RegulationUseCase{
-		repo:        repo,
-		itemRepo:    itemRepo,
-		mappingRepo: mappingRepo,
-		tenantRegRepo: tenantRegRepo,
-		log:         log.NewHelper(logger),
+		repo:              repo,
+		itemRepo:          itemRepo,
+		mappingRepo:       mappingRepo,
+		tenantRegRepo:     tenantRegRepo,
+		sessionRepo:       sessionRepo,
+		resultRepo:        resultRepo,
+		regulationAssRepo: regulationAssRepo,
+		log:               log.NewHelper(logger),
 	}
 }
 
@@ -115,6 +125,52 @@ func (uc *RegulationUseCase) DeleteRegulation(ctx context.Context, id uuid.UUID)
 	return uc.repo.Delete(ctx, id)
 }
 
+// AssignTenantToRegulation menghubungkan tenant ke suatu regulasi.
+func (uc *RegulationUseCase) AssignTenantToRegulation(ctx context.Context, regulationID, tenantID uuid.UUID) error {
+	_, err := uc.tenantRegRepo.Create(ctx, &TenantRegulation{
+		ID:           uuid.New(),
+		TenantID:     tenantID,
+		RegulationID: regulationID,
+	})
+	return err
+}
+
+// RevokeTenantFromRegulation mencopot hak akses tenant ke regulasi dan menghapus assessment periode berjalan.
+func (uc *RegulationUseCase) RevokeTenantFromRegulation(ctx context.Context, regulationID, tenantID uuid.UUID) error {
+	// 1. Hapus mapping akses
+	if err := uc.tenantRegRepo.Delete(ctx, tenantID, regulationID); err != nil {
+		return err
+	}
+
+	// 2. Cari assessment session untuk periode berjalan (tahun ini)
+	currentYear := time.Now().Year()
+	sessions, err := uc.sessionRepo.FindByTenantID(ctx, tenantID)
+	if err != nil {
+		uc.log.WithContext(ctx).Warnf("failed to find sessions for tenant %s: %v", tenantID, err)
+		return nil // Tetap sukses hapus mapping
+	}
+
+	for _, session := range sessions {
+		if session.PeriodYear == currentYear {
+			// 3. Hapus assessment results untuk regulasi ini di session tersebut
+			if err := uc.resultRepo.DeleteBySessionAndRegulation(ctx, session.ID, regulationID); err != nil {
+				uc.log.WithContext(ctx).Errorf("failed to delete results for session %s, reg %s: %v", session.ID, regulationID, err)
+			}
+			// 4. Hapus summary assessment untuk regulasi ini di session tersebut
+			if err := uc.regulationAssRepo.DeleteBySessionAndRegulation(ctx, session.ID, regulationID); err != nil {
+				uc.log.WithContext(ctx).Errorf("failed to delete summary for session %s, reg %s: %v", session.ID, regulationID, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// GetAssignedTenants mengembalikan daftar tenant yang memiliki akses ke regulasi tertentu.
+func (uc *RegulationUseCase) GetAssignedTenants(ctx context.Context, regulationID uuid.UUID) ([]*TenantRegulation, error) {
+	return uc.tenantRegRepo.FindByRegulationID(ctx, regulationID)
+}
+
 // --- RegulationItem Use Cases ---
 
 // CreateRegulationItem membuat item/pasal baru dalam regulasi.
@@ -123,13 +179,8 @@ func (uc *RegulationUseCase) CreateRegulationItem(ctx context.Context, item *Reg
 		return nil, fmt.Errorf("regulation_id is required")
 	}
 
-	// Fetch regulation to check category
-	reg, err := uc.repo.FindByID(ctx, item.RegulationID, uuid.Nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if reg.Category == "Internal" && item.ItemCode == 0 {
+	// Auto-increment if ItemCode is 0 (applies to all categories for manual entry)
+	if item.ItemCode == 0 {
 		max, err := uc.itemRepo.GetMaxItemCode(ctx, item.RegulationID)
 		if err != nil {
 			return nil, err
@@ -147,12 +198,6 @@ func (uc *RegulationUseCase) UpsertRegulationItem(ctx context.Context, item *Reg
 		return nil, fmt.Errorf("regulation_id is required")
 	}
 
-	// Fetch regulation to check category
-	reg, err := uc.repo.FindByID(ctx, item.RegulationID, uuid.Nil)
-	if err != nil {
-		return nil, err
-	}
-
 	if item.ItemCode != 0 {
 		existing, err := uc.itemRepo.FindByRegulationIDAndItemCode(ctx, item.RegulationID, item.ItemCode)
 		if err == nil {
@@ -160,13 +205,23 @@ func (uc *RegulationUseCase) UpsertRegulationItem(ctx context.Context, item *Reg
 			item.ID = existing.ID
 			return uc.itemRepo.Update(ctx, item)
 		}
-	} else if reg.Category == "Internal" {
-		// Auto-increment for internal if ItemCode is 0
-		max, err := uc.itemRepo.GetMaxItemCode(ctx, item.RegulationID)
+	} else {
+		// For Upsert (Import), we only auto-increment for Internal regulations if ItemCode is 0.
+		// Fetch regulation to check category
+		reg, err := uc.repo.FindByID(ctx, item.RegulationID, uuid.Nil)
 		if err != nil {
 			return nil, err
 		}
-		item.ItemCode = max + 1
+		
+		if reg.Category == "Internal" {
+			max, err := uc.itemRepo.GetMaxItemCode(ctx, item.RegulationID)
+			if err != nil {
+				return nil, err
+			}
+			item.ItemCode = max + 1
+		} else {
+			return nil, fmt.Errorf("item_code is required for non-internal regulation imports")
+		}
 	}
 
 	// Create new

@@ -9,6 +9,8 @@ definitions:
         type: integer
       id:
         type: string
+      isActive:
+        type: boolean
       regulationID:
         type: string
       sessionID:
@@ -45,24 +47,36 @@ definitions:
         type: string
       risk_title:
         type: string
-      tenant_id:
-        type: string
     type: object
   biz.RiskCategory:
     properties:
-      appetite:
-        type: string
       id:
         type: string
       title:
         type: string
-      tolerance:
+    type: object
+  biz.TenantRegulation:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      regulationID:
+        type: string
+      tenantID:
         type: string
     type: object
   service.AddMappingRequest:
     properties:
       property_id:
         type: string
+    type: object
+  service.AssignTenantRequest:
+    properties:
+      tenant_ids:
+        items:
+          type: string
+        type: array
     type: object
   service.CreatePropertyRequest:
     properties:
@@ -75,6 +89,8 @@ definitions:
     properties:
       content:
         type: string
+      item_code:
+        type: integer
       property_ids:
         items:
           type: string
@@ -91,6 +107,8 @@ definitions:
       regulation_type:
         type: string
       status:
+        type: string
+      tenant_id:
         type: string
       title:
         type: string
@@ -130,6 +148,8 @@ definitions:
         type: string
       id:
         type: string
+      item_code:
+        type: integer
       property_ids:
         items:
           type: string
@@ -431,6 +451,28 @@ paths:
             type: array
       tags:
       - AssessmentsService
+  /api/v1/assessments/sessions/{id}/sync:
+    post:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Regulation ID
+        in: query
+        name: regulation_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - AssessmentsService
   /api/v1/properties:
     get:
       produces:
@@ -618,6 +660,33 @@ paths:
             $ref: '#/definitions/service.RegulationResponse'
       tags:
       - RegulationsService
+  /api/v1/regulations/{id}/assign-tenant:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant Data
+        in: body
+        name: tenant
+        required: true
+        schema:
+          $ref: '#/definitions/service.AssignTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - RegulationsService
   /api/v1/regulations/{id}/items:
     get:
       parameters:
@@ -796,6 +865,52 @@ paths:
             additionalProperties:
               type: string
             type: object
+      tags:
+      - RegulationsService
+  /api/v1/regulations/{id}/revoke-tenant:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant Data
+        in: body
+        name: tenant
+        required: true
+        schema:
+          $ref: '#/definitions/service.AssignTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      tags:
+      - RegulationsService
+  /api/v1/regulations/{id}/tenants:
+    get:
+      parameters:
+      - description: Regulation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/biz.TenantRegulation'
+            type: array
       tags:
       - RegulationsService
   /api/v1/risk-categories:

@@ -69,6 +69,7 @@ type RegulationPropertyMappingRepo interface {
 type TenantRegulationRepo interface {
 	Create(ctx context.Context, tr *TenantRegulation) (*TenantRegulation, error)
 	FindByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*TenantRegulation, error)
+	FindByRegulationID(ctx context.Context, regulationID uuid.UUID) ([]*TenantRegulation, error)
 	Delete(ctx context.Context, tenantID, regulationID uuid.UUID) error
 }
 
@@ -91,6 +92,7 @@ type AssessmentResultRepo interface {
 	FindBySessionID(ctx context.Context, sessionID uuid.UUID) ([]*AssessmentResult, error)
 	Upsert(ctx context.Context, result *AssessmentResult) (*AssessmentResult, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	DeleteBySessionAndRegulation(ctx context.Context, sessionID, regulationID uuid.UUID) error
 }
 
 // RegulationAssessmentRepo mendefinisikan kontrak untuk ringkasan assessment.
@@ -100,6 +102,7 @@ type RegulationAssessmentRepo interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*RegulationAssessment, error)
 	Update(ctx context.Context, ra *RegulationAssessment) (*RegulationAssessment, error)
 	RecalculateForSession(ctx context.Context, sessionID uuid.UUID, regulationID uuid.UUID) (*RegulationAssessment, error)
+	DeleteBySessionAndRegulation(ctx context.Context, sessionID, regulationID uuid.UUID) error
 }
 
 // --- Risk Management Repository Interface ---

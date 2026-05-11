@@ -450,6 +450,23 @@ func (r *tenantRegulationRepo) FindByTenantID(ctx context.Context, tenantID uuid
 	return results, nil
 }
 
+func (r *tenantRegulationRepo) FindByRegulationID(ctx context.Context, regulationID uuid.UUID) ([]*biz.TenantRegulation, error) {
+	var models []*TenantRegulationModel
+	if result := r.data.db.WithContext(ctx).Where("regulation_id = ?", regulationID).Find(&models); result.Error != nil {
+		return nil, result.Error
+	}
+	results := make([]*biz.TenantRegulation, 0, len(models))
+	for _, m := range models {
+		results = append(results, &biz.TenantRegulation{
+			ID:           m.ID,
+			TenantID:     m.TenantID,
+			RegulationID: m.RegulationID,
+			CreatedAt:    m.CreatedAt,
+		})
+	}
+	return results, nil
+}
+
 func (r *tenantRegulationRepo) Delete(ctx context.Context, tenantID, regulationID uuid.UUID) error {
 	return r.data.db.WithContext(ctx).
 		Where("tenant_id = ? AND regulation_id = ?", tenantID, regulationID).

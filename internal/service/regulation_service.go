@@ -72,6 +72,16 @@ type AddMappingRequest struct {
 	PropertyID string `json:"property_id"`
 }
 
+type AssignTenantRequest struct {
+	TenantIDs []string `json:"tenant_ids"`
+}
+
+type TenantRegulationResponse struct {
+	ID           string `json:"id"`
+	TenantID     string `json:"tenant_id"`
+	RegulationID string `json:"regulation_id"`
+}
+
 // --- Helpers ---
 
 func (s *RegulationService) checkPermission(r *http.Request, category string) bool {
@@ -286,6 +296,101 @@ func (s *RegulationService) DeleteRegulation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]string{"message": "regulation deleted"})
+}
+
+// AssignTenant godoc
+// @Tags RegulationsService
+// @Accept json
+// @Produce json
+// @Param id path string true "Regulation ID"
+// @Param tenant body AssignTenantRequest true "Tenant Data"
+// @Success 200 {object} map[string]string
+// @Router /api/v1/regulations/{id}/assign-tenant [post]
+func (s *RegulationService) AssignTenant(w http.ResponseWriter, r *http.Request) {
+	regID, err := parseUUIDFromRequest(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid regulation id")
+		return
+	}
+	var req AssignTenantRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	
+	for _, tidStr := range req.TenantIDs {
+		tenantID, err := uuid.Parse(tidStr)
+		if err != nil {
+			continue
+		}
+		// Kita abaikan error jika sudah ada (unique constraint) 
+		// agar pemanggilan berikutnya tetap berjalan.
+		_ = s.uc.AssignTenantToRegulation(r.Context(), regID, tenantID)
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "tenants assigned to regulation"})
+}
+
+// RevokeTenant godoc
+// @Tags RegulationsService
+// @Accept json
+// @Produce json
+// @Param id path string true "Regulation ID"
+// @Param tenant body AssignTenantRequest true "Tenant Data"
+// @Success 200 {object} map[string]string
+// @Router /api/v1/regulations/{id}/revoke-tenant [post]
+func (s *RegulationService) RevokeTenant(w http.ResponseWriter, r *http.Request) {
+	regID, err := parseUUIDFromRequest(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid regulation id")
+		return
+	}
+	var req AssignTenantRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	
+	for _, tidStr := range req.TenantIDs {
+		tenantID, err := uuid.Parse(tidStr)
+		if err != nil {
+			continue
+		}
+		if err := s.uc.RevokeTenantFromRegulation(r.Context(), regID, tenantID); err != nil {
+			s.log.Errorf("failed to revoke tenant %s from reg %s: %v", tenantID, regID, err)
+		}
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "tenants revoked from regulation"})
+}
+
+// GetAssignedTenants godoc
+// @Tags RegulationsService
+// @Produce json
+// @Param id path string true "Regulation ID"
+// @Success 200 {array} biz.TenantRegulation
+// @Router /api/v1/regulations/{id}/tenants [get]
+func (s *RegulationService) GetAssignedTenants(w http.ResponseWriter, r *http.Request) {
+	regID, err := parseUUIDFromRequest(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid regulation id")
+		return
+	}
+	results, err := s.uc.GetAssignedTenants(r.Context(), regID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	
+	resp := make([]*TenantRegulationResponse, 0, len(results))
+	for _, tr := range results {
+		resp = append(resp, &TenantRegulationResponse{
+			ID:           tr.ID.String(),
+			TenantID:     tr.TenantID.String(),
+			RegulationID: tr.RegulationID.String(),
+		})
+	}
+	respondJSON(w, http.StatusOK, resp)
 }
 
 // --- Item Handlers ---

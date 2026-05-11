@@ -59,9 +59,11 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	regR.HandleFunc("", reg.ListRegulations).Methods("GET")
 	regR.HandleFunc("", reg.CreateRegulation).Methods("POST")
 	regR.HandleFunc("/upsert", AdminOnly(reg.UpsertRegulation)).Methods("POST")
-	regR.HandleFunc("/{id}", reg.GetRegulation).Methods("GET")
-	regR.HandleFunc("/{id}", reg.UpdateRegulation).Methods("PUT")
-	regR.HandleFunc("/{id}", reg.DeleteRegulation).Methods("DELETE")
+	
+	// Specific sub-routes should come before generic {id} if there's any risk of overlap
+	regR.HandleFunc("/{id}/assign-tenant", AdminOnly(reg.AssignTenant)).Methods("POST")
+	regR.HandleFunc("/{id}/revoke-tenant", AdminOnly(reg.RevokeTenant)).Methods("POST")
+	regR.HandleFunc("/{id}/tenants", reg.GetAssignedTenants).Methods("GET")
 	regR.HandleFunc("/{id}/items", reg.ListItems).Methods("GET")
 	regR.HandleFunc("/{id}/items", AdminOnly(reg.CreateItem)).Methods("POST")
 	regR.HandleFunc("/{id}/items/upsert", AdminOnly(reg.UpsertItem)).Methods("POST")
@@ -71,6 +73,11 @@ func NewHTTPServer(c *conf.Server, tenant *service.TenantService, property *serv
 	regR.HandleFunc("/{id}/mappings", reg.ListMappings).Methods("GET")
 	regR.HandleFunc("/{id}/mappings", AdminOnly(reg.AddMapping)).Methods("POST")
 	regR.HandleFunc("/{id}/mappings/{mapping_id}", AdminOnly(reg.DeleteMapping)).Methods("DELETE")
+	
+	// Generic ID routes last
+	regR.HandleFunc("/{id}", reg.GetRegulation).Methods("GET")
+	regR.HandleFunc("/{id}", reg.UpdateRegulation).Methods("PUT")
+	regR.HandleFunc("/{id}", reg.DeleteRegulation).Methods("DELETE")
 
 	// Assessment API
 	a := router.PathPrefix("/api/v1/assessments").Subrouter()

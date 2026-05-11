@@ -190,6 +190,13 @@ func (r *assessmentResultRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.data.db.WithContext(ctx).Delete(&AssessmentResultModel{}, "id = ?", id).Error
 }
 
+func (r *assessmentResultRepo) DeleteBySessionAndRegulation(ctx context.Context, sessionID, regulationID uuid.UUID) error {
+	// Delete results where item belongs to the regulation
+	return r.data.db.WithContext(ctx).
+		Where("session_id = ? AND regulation_item_id IN (SELECT id FROM regulation_items WHERE regulation_id = ?)", sessionID, regulationID).
+		Delete(&AssessmentResultModel{}).Error
+}
+
 func toResultDomain(m *AssessmentResultModel) *biz.AssessmentResult {
 	return &biz.AssessmentResult{
 		ID:               m.ID,
@@ -222,6 +229,7 @@ func (r *regulationAssessmentRepo) Create(ctx context.Context, ra *biz.Regulatio
 		AmountPass:   ra.AmountPass,
 		AmountFail:   ra.AmountFail,
 		AmountNA:     ra.AmountNA,
+		IsActive:     ra.IsActive,
 	}
 	if result := r.data.db.WithContext(ctx).Create(m); result.Error != nil {
 		return nil, result.Error
@@ -260,6 +268,7 @@ func (r *regulationAssessmentRepo) Update(ctx context.Context, ra *biz.Regulatio
 		AmountPass:   ra.AmountPass,
 		AmountFail:   ra.AmountFail,
 		AmountNA:     ra.AmountNA,
+		IsActive:     ra.IsActive,
 	}
 	if result := r.data.db.WithContext(ctx).Save(m); result.Error != nil {
 		return nil, result.Error
@@ -310,6 +319,7 @@ func (r *regulationAssessmentRepo) RecalculateForSession(ctx context.Context, se
 		AmountPass:   ra.AmountPass,
 		AmountFail:   ra.AmountFail,
 		AmountNA:     ra.AmountNA,
+		IsActive:     true,
 	}
 	res := r.data.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
@@ -334,5 +344,12 @@ func toRegulationAssessmentDomain(m *RegulationAssessmentModel) *biz.RegulationA
 		AmountPass:   m.AmountPass,
 		AmountFail:   m.AmountFail,
 		AmountNA:     m.AmountNA,
+		IsActive:     m.IsActive,
 	}
+}
+
+func (r *regulationAssessmentRepo) DeleteBySessionAndRegulation(ctx context.Context, sessionID, regulationID uuid.UUID) error {
+	return r.data.db.WithContext(ctx).
+		Where("session_id = ? AND regulation_id = ?", sessionID, regulationID).
+		Delete(&RegulationAssessmentModel{}).Error
 }

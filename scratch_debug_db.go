@@ -26,6 +26,7 @@ type RegulationAssessmentModel struct {
 	AmountPass   int
 	AmountFail   int
 	AmountNA     int
+	IsActive     bool
 }
 
 func (RegulationAssessmentModel) TableName() string { return "regulation_assesments" }
@@ -48,6 +49,6 @@ func main() {
 	var summaries []RegulationAssessmentModel
 	db.Find(&summaries)
 	for _, s := range summaries {
-		fmt.Printf("Session: %s, Reg: %s, Pass: %d, Fail: %d, NA: %d\n", s.SessionID, s.RegulationID, s.AmountPass, s.AmountFail, s.AmountNA)
+		fmt.Printf("Session: %s, Reg: %s, Pass: %d, Fail: %d, NA: %d, Active: %v\n", s.SessionID, s.RegulationID, s.AmountPass, s.AmountFail, s.AmountNA, s.IsActive)
 	}
 }

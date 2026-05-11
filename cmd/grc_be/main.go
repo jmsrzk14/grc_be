@@ -118,7 +118,7 @@ func main() {
 
 	tenantUC := biz.NewTenantUseCase(tenantRepo, logger)
 	propertyUC := biz.NewPropertyUseCase(propertyRepo, tpRepo, logger)
-	regUC := biz.NewRegulationUseCase(regRepo, itemRepo, mappingRepo, tenantRegRepo, logger)
+	regUC := biz.NewRegulationUseCase(regRepo, itemRepo, mappingRepo, tenantRegRepo, sessionRepo, resultRepo, raRepo, logger)
 	assUC := biz.NewAssessmentUseCase(sessionRepo, resultRepo, raRepo, itemRepo, logger)
 	authUC := biz.NewAuthUseCase(authRepo, logger)
 	riskUC := biz.NewRiskUseCase(riskRepo, riskCatRepo, riskCatTenantRepo, logger)

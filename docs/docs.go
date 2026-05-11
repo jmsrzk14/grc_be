@@ -622,6 +622,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/regulations/{id}/assign-tenant": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Tenant Data",
+                        "name": "tenant",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.AssignTenantRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/regulations/{id}/items": {
             "get": {
                 "produces": [
@@ -894,6 +936,78 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": {
                                 "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/regulations/{id}/revoke-tenant": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Tenant Data",
+                        "name": "tenant",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.AssignTenantRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/regulations/{id}/tenants": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RegulationsService"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Regulation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/biz.TenantRegulation"
                             }
                         }
                     }
@@ -1374,6 +1488,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "isActive": {
+                    "type": "boolean"
+                },
                 "regulationID": {
                     "type": "string"
                 },
@@ -1442,11 +1559,39 @@ const docTemplate = `{
                 }
             }
         },
+        "biz.TenantRegulation": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "regulationID": {
+                    "type": "string"
+                },
+                "tenantID": {
+                    "type": "string"
+                }
+            }
+        },
         "service.AddMappingRequest": {
             "type": "object",
             "properties": {
                 "property_id": {
                     "type": "string"
+                }
+            }
+        },
+        "service.AssignTenantRequest": {
+            "type": "object",
+            "properties": {
+                "tenant_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1468,7 +1613,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "item_code": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "property_ids": {
                     "type": "array",
@@ -1494,6 +1639,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "tenant_id": {
                     "type": "string"
                 },
                 "title": {
@@ -1556,7 +1704,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "item_code": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "property_ids": {
                     "type": "array",

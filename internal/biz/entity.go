@@ -105,6 +105,7 @@ type RegulationAssessment struct {
 	AmountPass   int
 	AmountFail   int
 	AmountNA     int
+	IsActive     bool
 }
 
 // User merepresentasikan pengguna sistem.

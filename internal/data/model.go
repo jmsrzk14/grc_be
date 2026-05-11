@@ -104,7 +104,10 @@ type RegulationAssessmentModel struct {
 	AmountPass   int       `gorm:"default:0"`
 	AmountFail   int       `gorm:"default:0"`
 	AmountNA     int       `gorm:"default:0"`
+	IsActive     bool      `gorm:"default:true"`
 }
+
+func (RegulationAssessmentModel) TableName() string { return "regulation_assesments" }
 
 // UserModel adalah model GORM untuk tabel users.
 type UserModel struct {
