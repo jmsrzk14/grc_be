@@ -97,6 +97,103 @@ func (r *assessmentSessionRepo) Delete(ctx context.Context, id uuid.UUID) error 
 	return r.data.db.WithContext(ctx).Delete(&AssessmentSessionModel{}, "id = ?", id).Error
 }
 
+func (r *assessmentSessionRepo) FindByTenantAndYear(ctx context.Context, tenantID uuid.UUID, year int) (*biz.AssessmentSession, error) {
+	var m AssessmentSessionModel
+	if result := r.data.db.WithContext(ctx).
+		Where("tenant_id = ? AND period_year = ?", tenantID, year).
+		First(&m); result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, biz.ErrNotFound
+		}
+		return nil, result.Error
+	}
+	return toSessionDomain(&m), nil
+}
+
+func (r *assessmentSessionRepo) CheckAndComplete(ctx context.Context, sessionID uuid.UUID) error {
+	// Logika ini memastikan status 'Completed' hanya diberikan jika SEMUA item
+	// dari SEMUA regulasi yang aktif dalam sesi ini telah dijawab.
+
+	// 1. Ambil data session untuk mendapatkan tenant_id dan period_year (untuk audit/logika jika diperlukan)
+	var session AssessmentSessionModel
+	if err := r.data.db.WithContext(ctx).First(&session, "id = ?", sessionID).Error; err != nil {
+		return err
+	}
+
+	// 2. Dapatkan semua regulation_id yang seharusnya diperiksa:
+	// - Semua regulasi Eksternal (karena berlaku umum)
+	// - Regulasi Internal yang sudah aktif di sesi ini (tercatat di regulation_assesments)
+	var activeRegIDs []uuid.UUID
+	err := r.data.db.WithContext(ctx).
+		Table("regulations").
+		Where("category != 'Internal'").
+		Or("id IN (SELECT regulation_id FROM regulation_assesments WHERE session_id = ? AND is_active = ?)", sessionID, true).
+		Pluck("id", &activeRegIDs).Error
+	if err != nil {
+		return err
+	}
+
+	if len(activeRegIDs) == 0 {
+		return nil
+	}
+
+	// 3. Cari semua id item dari tabel regulation_items berdasarkan regulation_id tadi
+	var totalItemIDs []uuid.UUID
+	err = r.data.db.WithContext(ctx).
+		Table("regulation_items").
+		Where("regulation_id IN ?", activeRegIDs).
+		Pluck("id", &totalItemIDs).Error
+	if err != nil {
+		return err
+	}
+
+	if len(totalItemIDs) == 0 {
+		return nil
+	}
+
+	// 4. Dapatkan semua regulation_item_id yang sudah ada hasilnya di assessment_results untuk session ini
+	var answeredItemIDs []uuid.UUID
+	err = r.data.db.WithContext(ctx).
+		Table("assessment_results").
+		Where("session_id = ?", sessionID).
+		Pluck("regulation_item_id", &answeredItemIDs).Error
+	if err != nil {
+		return err
+	}
+
+	// 5. Hitung sisa item yang BELUM dikerjakan
+	answeredMap := make(map[uuid.UUID]bool)
+	for _, id := range answeredItemIDs {
+		answeredMap[id] = true
+	}
+
+	var remainingUnanswered int
+	for _, id := range totalItemIDs {
+		if !answeredMap[id] {
+			remainingUnanswered++
+		}
+	}
+
+	// 6. Tentukan status baru
+	var newStatus string
+	if remainingUnanswered == 0 {
+		newStatus = "Completed"
+	} else {
+		newStatus = "In_Progress"
+	}
+
+	// 7. Jika hasil pencarian (Query) memberikan hasil kosong (empty set), update menjadi completed
+	// (dan handle transisi In_Progress)
+	if session.Status != newStatus {
+		return r.data.db.WithContext(ctx).
+			Model(&AssessmentSessionModel{}).
+			Where("id = ?", sessionID).
+			Update("status", newStatus).Error
+	}
+
+	return nil
+}
+
 func toSessionDomain(m *AssessmentSessionModel) *biz.AssessmentSession {
 	return &biz.AssessmentSession{
 		ID:         m.ID,
@@ -353,3 +450,71 @@ func (r *regulationAssessmentRepo) DeleteBySessionAndRegulation(ctx context.Cont
 		Where("session_id = ? AND regulation_id = ?", sessionID, regulationID).
 		Delete(&RegulationAssessmentModel{}).Error
 }
+
+func (r *regulationAssessmentRepo) Deactivate(ctx context.Context, sessionID, regulationID uuid.UUID) error {
+	// Gunakan Map untuk memastikan GORM tidak mengabaikan nilai false (zero value)
+	values := map[string]interface{}{
+		"is_active": false,
+	}
+
+	result := r.data.db.WithContext(ctx).
+		Model(&RegulationAssessmentModel{}).
+		Where("session_id = ? AND regulation_id = ?", sessionID, regulationID).
+		Updates(values)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Jika tidak ada baris yang terupdate, berarti record belum ada, maka buat baru
+	if result.RowsAffected == 0 {
+		m := &RegulationAssessmentModel{
+			ID:           uuid.New(),
+			RegulationID: regulationID,
+			SessionID:    sessionID,
+			IsActive:     false,
+		}
+		return r.data.db.WithContext(ctx).Create(m).Error
+	}
+
+	return nil
+}
+
+func (r *regulationAssessmentRepo) Activate(ctx context.Context, sessionID, regulationID uuid.UUID) error {
+	values := map[string]interface{}{
+		"is_active": true,
+	}
+
+	result := r.data.db.WithContext(ctx).
+		Model(&RegulationAssessmentModel{}).
+		Where("session_id = ? AND regulation_id = ?", sessionID, regulationID).
+		Updates(values)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		m := &RegulationAssessmentModel{
+			ID:           uuid.New(),
+			RegulationID: regulationID,
+			SessionID:    sessionID,
+			IsActive:     true,
+		}
+		return r.data.db.WithContext(ctx).Create(m).Error
+	}
+
+	return nil
+}
+
+func (r *regulationAssessmentRepo) IsActive(ctx context.Context, sessionID, regulationID uuid.UUID) (bool, error) {
+	var m RegulationAssessmentModel
+	if result := r.data.db.WithContext(ctx).
+		Where("session_id = ? AND regulation_id = ?", sessionID, regulationID).
+		First(&m); result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// Jika belum ada record summary, defaultnya Aktif (true)
+			return true, nil
+		}
+		return false, result.Error
+	}

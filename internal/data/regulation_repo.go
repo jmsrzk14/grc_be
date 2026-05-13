@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"errors"
+	"time"
 
 	"grc_be/internal/biz"
 
@@ -45,6 +46,7 @@ func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID, tenantID uu
 		AmountPass int
 		AmountFail int
 		AmountNA   int
+		IsActive   bool
 	}
 	var res resultWithStats
 
@@ -56,16 +58,16 @@ func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID, tenantID uu
 	if tenantID != uuid.Nil {
 		// Ambil session terbaru milik tenant
 		type sessionRow struct{ ID uuid.UUID }
-		var latestSession sessionRow
+		var currentSession sessionRow
+		currentYear := time.Now().Year()
 		r.data.db.WithContext(ctx).
 			Table("assessment_sessions").
 			Select("id").
-			Where("tenant_id = ?", tenantID).
-			Order("created_at DESC").
+			Where("tenant_id = ? AND period_year = ?", tenantID, currentYear).
 			Limit(1).
-			Scan(&latestSession)
+			Scan(&currentSession)
 
-		if latestSession.ID != uuid.Nil {
+		if currentSession.ID != uuid.Nil {
 			// Hitung amount secara dinamis.
 			subQuery := r.data.db.Table("regulation_items").
 				Select(
@@ -82,17 +84,18 @@ func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID, tenantID uu
 						"   ELSE NULL END) AS amount_na",
 					tenantID,
 				).
-				Joins("LEFT JOIN assessment_results ar ON regulation_items.id = ar.regulation_item_id AND ar.session_id = ?", latestSession.ID).
+				Joins("LEFT JOIN assessment_results ar ON regulation_items.id = ar.regulation_item_id AND ar.session_id = ?", currentSession.ID).
 				Group("regulation_items.regulation_id")
 
 			db = db.
-				Select("regulations.*, COALESCE(stats.amount_pass, 0) AS amount_pass, COALESCE(stats.amount_fail, 0) AS amount_fail, COALESCE(stats.amount_na, 0) AS amount_na").
-				Joins("LEFT JOIN (?) AS stats ON regulations.id = stats.regulation_id", subQuery)
+				Select("regulations.*, COALESCE(stats.amount_pass, 0) AS amount_pass, COALESCE(stats.amount_fail, 0) AS amount_fail, COALESCE(stats.amount_na, 0) AS amount_na, COALESCE(ra.is_active, true) AS is_active").
+				Joins("LEFT JOIN (?) AS stats ON regulations.id = stats.regulation_id", subQuery).
+				Joins("LEFT JOIN regulation_assesments ra ON regulations.id = ra.regulation_id AND ra.session_id = ?", currentSession.ID)
 		} else {
-			db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
+			db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na, true AS is_active")
 		}
 	} else {
-		db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
+		db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na, true AS is_active")
 	}
 
 	if err := db.Where("regulations.id = ?", id).Scan(&res).Error; err != nil {
@@ -106,6 +109,7 @@ func (r *regulationRepo) FindByID(ctx context.Context, id uuid.UUID, tenantID uu
 	reg.AmountPass = res.AmountPass
 	reg.AmountFail = res.AmountFail
 	reg.AmountNA = res.AmountNA
+	reg.IsActive = res.IsActive
 	return reg, nil
 }
 
@@ -115,6 +119,7 @@ func (r *regulationRepo) FindAll(ctx context.Context, tenantID uuid.UUID) ([]*bi
 		AmountPass int
 		AmountFail int
 		AmountNA   int
+		IsActive   bool
 	}
 	var results []*resultWithStats
 
@@ -126,21 +131,17 @@ func (r *regulationRepo) FindAll(ctx context.Context, tenantID uuid.UUID) ([]*bi
 	if tenantID != uuid.Nil {
 		// Ambil session terbaru milik tenant
 		type sessionRow struct{ ID uuid.UUID }
-		var latestSession sessionRow
+		var currentSession sessionRow
+		currentYear := time.Now().Year()
 		r.data.db.WithContext(ctx).
 			Table("assessment_sessions").
 			Select("id").
-			Where("tenant_id = ?", tenantID).
-			Order("created_at DESC").
+			Where("tenant_id = ? AND period_year = ?", tenantID, currentYear).
 			Limit(1).
-			Scan(&latestSession)
+			Scan(&currentSession)
 
-		if latestSession.ID != uuid.Nil {
+		if currentSession.ID != uuid.Nil {
 			// Hitung amount secara dinamis. 
-			// N/A dihitung jika:
-			// 1. Statusnya eksplisit 'N/A' di assessment_results
-			// 2. BELUM ada di assessment_results TAPI item tersebut memiliki mapping properti 
-			//    dan tidak ada yang cocok dengan properti milik tenant (tidak relevan).
 			subQuery := r.data.db.Table("regulation_items").
 				Select(
 					"regulation_items.regulation_id,"+
@@ -156,17 +157,18 @@ func (r *regulationRepo) FindAll(ctx context.Context, tenantID uuid.UUID) ([]*bi
 						"   ELSE NULL END) AS amount_na",
 					tenantID,
 				).
-				Joins("LEFT JOIN assessment_results ar ON regulation_items.id = ar.regulation_item_id AND ar.session_id = ?", latestSession.ID).
+				Joins("LEFT JOIN assessment_results ar ON regulation_items.id = ar.regulation_item_id AND ar.session_id = ?", currentSession.ID).
 				Group("regulation_items.regulation_id")
 
 			db = db.
-				Select("regulations.*, COALESCE(stats.amount_pass, 0) AS amount_pass, COALESCE(stats.amount_fail, 0) AS amount_fail, COALESCE(stats.amount_na, 0) AS amount_na").
-				Joins("LEFT JOIN (?) AS stats ON regulations.id = stats.regulation_id", subQuery)
+				Select("regulations.*, COALESCE(stats.amount_pass, 0) AS amount_pass, COALESCE(stats.amount_fail, 0) AS amount_fail, COALESCE(stats.amount_na, 0) AS amount_na, COALESCE(ra.is_active, true) AS is_active").
+				Joins("LEFT JOIN (?) AS stats ON regulations.id = stats.regulation_id", subQuery).
+				Joins("LEFT JOIN regulation_assesments ra ON regulations.id = ra.regulation_id AND ra.session_id = ?", currentSession.ID)
 		} else {
-			db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na")
+			db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na, true AS is_active")
 		}
 	} else {
-		db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na").Order("created_at DESC")
+		db = db.Select("regulations.*, 0 AS amount_pass, 0 AS amount_fail, 0 AS amount_na, true AS is_active").Order("created_at DESC")
 	}
 
 	if err := db.Order("regulations.created_at DESC").Scan(&results).Error; err != nil {
@@ -180,6 +182,7 @@ func (r *regulationRepo) FindAll(ctx context.Context, tenantID uuid.UUID) ([]*bi
 		reg.AmountPass = res.AmountPass
 		reg.AmountFail = res.AmountFail
 		reg.AmountNA = res.AmountNA
+		reg.IsActive = res.IsActive
 		regs = append(regs, reg)
 	}
 	return regs, nil
@@ -421,13 +424,15 @@ func NewTenantRegulationRepo(data *Data, logger log.Logger) biz.TenantRegulation
 	return &tenantRegulationRepo{data: data, log: log.NewHelper(logger)}
 }
 
-func (r *tenantRegulationRepo) Create(ctx context.Context, tr *biz.TenantRegulation) (*biz.TenantRegulation, error) {
-	m := &TenantRegulationModel{
-		ID:           tr.ID,
-		TenantID:     tr.TenantID,
-		RegulationID: tr.RegulationID,
-	}
-	if result := r.data.db.WithContext(ctx).Create(m); result.Error != nil {
+func (r *tenantRegulationRepo) Upsert(ctx context.Context, tr *biz.TenantRegulation) (*biz.TenantRegulation, error) {
+	// Simple UPSERT without is_active
+	result := r.data.db.WithContext(ctx).Exec(
+		`INSERT INTO tenant_regulations (id, tenant_id, regulation_id, created_at)
+		 VALUES (?, ?, ?, NOW())
+		 ON CONFLICT (tenant_id, regulation_id) DO NOTHING`,
+		tr.ID, tr.TenantID, tr.RegulationID,
+	)
+	if result.Error != nil {
 		return nil, result.Error
 	}
 	return tr, nil
@@ -435,7 +440,9 @@ func (r *tenantRegulationRepo) Create(ctx context.Context, tr *biz.TenantRegulat
 
 func (r *tenantRegulationRepo) FindByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*biz.TenantRegulation, error) {
 	var models []*TenantRegulationModel
-	if result := r.data.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Find(&models); result.Error != nil {
+	if result := r.data.db.WithContext(ctx).
+		Where("tenant_id = ?", tenantID).
+		Find(&models); result.Error != nil {
 		return nil, result.Error
 	}
 	results := make([]*biz.TenantRegulation, 0, len(models))
@@ -452,7 +459,9 @@ func (r *tenantRegulationRepo) FindByTenantID(ctx context.Context, tenantID uuid
 
 func (r *tenantRegulationRepo) FindByRegulationID(ctx context.Context, regulationID uuid.UUID) ([]*biz.TenantRegulation, error) {
 	var models []*TenantRegulationModel
-	if result := r.data.db.WithContext(ctx).Where("regulation_id = ?", regulationID).Find(&models); result.Error != nil {
+	if result := r.data.db.WithContext(ctx).
+		Where("regulation_id = ?", regulationID).
+		Find(&models); result.Error != nil {
 		return nil, result.Error
 	}
 	results := make([]*biz.TenantRegulation, 0, len(models))

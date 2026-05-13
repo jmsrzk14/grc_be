@@ -67,7 +67,8 @@ type RegulationPropertyMappingRepo interface {
 }
 
 type TenantRegulationRepo interface {
-	Create(ctx context.Context, tr *TenantRegulation) (*TenantRegulation, error)
+	// Upsert membuat mapping baru atau memastikan mapping sudah ada (idempotent).
+	Upsert(ctx context.Context, tr *TenantRegulation) (*TenantRegulation, error)
 	FindByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*TenantRegulation, error)
 	FindByRegulationID(ctx context.Context, regulationID uuid.UUID) ([]*TenantRegulation, error)
 	Delete(ctx context.Context, tenantID, regulationID uuid.UUID) error
@@ -83,6 +84,8 @@ type AssessmentSessionRepo interface {
 	FindAll(ctx context.Context) ([]*AssessmentSession, error)
 	Update(ctx context.Context, session *AssessmentSession) (*AssessmentSession, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	FindByTenantAndYear(ctx context.Context, tenantID uuid.UUID, year int) (*AssessmentSession, error)
+	CheckAndComplete(ctx context.Context, sessionID uuid.UUID) error
 }
 
 // AssessmentResultRepo mendefinisikan kontrak akses data untuk AssessmentResult.
@@ -103,6 +106,9 @@ type RegulationAssessmentRepo interface {
 	Update(ctx context.Context, ra *RegulationAssessment) (*RegulationAssessment, error)
 	RecalculateForSession(ctx context.Context, sessionID uuid.UUID, regulationID uuid.UUID) (*RegulationAssessment, error)
 	DeleteBySessionAndRegulation(ctx context.Context, sessionID, regulationID uuid.UUID) error
+	Deactivate(ctx context.Context, sessionID, regulationID uuid.UUID) error
+	Activate(ctx context.Context, sessionID, regulationID uuid.UUID) error
+	IsActive(ctx context.Context, sessionID, regulationID uuid.UUID) (bool, error)
 }
 
 // --- Risk Management Repository Interface ---

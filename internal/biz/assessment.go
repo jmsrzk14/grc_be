@@ -45,7 +45,7 @@ func (uc *AssessmentUseCase) CreateSession(ctx context.Context, session *Assessm
 		return nil, fmt.Errorf("session title is required")
 	}
 	session.ID = uuid.New()
-	session.Status = "Draft"
+	session.Status = "In_Progress"
 
 	created, err := uc.sessionRepo.Create(ctx, session)
 	if err != nil {
@@ -111,6 +111,11 @@ func (uc *AssessmentUseCase) SynchronizeSession(ctx context.Context, sessionID u
 		return err
 	}
 
+	// Cek apakah semua item sudah dikerjakan, jika ya update status session menjadi Completed.
+	if err := uc.sessionRepo.CheckAndComplete(ctx, sessionID); err != nil {
+		uc.log.WithContext(ctx).Warnf("check and complete session failed: %v", err)
+	}
+
 	return nil
 }
 
@@ -169,6 +174,11 @@ func (uc *AssessmentUseCase) SubmitResult(ctx context.Context, result *Assessmen
 
 	if _, err := uc.regulationAssRepo.RecalculateForSession(ctx, result.SessionID, item.RegulationID); err != nil {
 		uc.log.WithContext(ctx).Warnf("recalculation failed: %v", err)
+	}
+
+	// Cek apakah semua item sudah dikerjakan, jika ya update status session menjadi Completed.
+	if err := uc.sessionRepo.CheckAndComplete(ctx, result.SessionID); err != nil {
+		uc.log.WithContext(ctx).Warnf("check and complete session failed: %v", err)
 	}
 
 	return saved, nil

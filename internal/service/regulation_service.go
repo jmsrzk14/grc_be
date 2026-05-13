@@ -42,6 +42,8 @@ type RegulationResponse struct {
 	AmountPass     int       `json:"amount_pass"`
 	AmountFail     int       `json:"amount_fail"`
 	AmountNA       int       `json:"amount_na"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      string    `json:"created_at"`
 }
 
 type UpdateRegulationRequest struct {
@@ -80,6 +82,7 @@ type TenantRegulationResponse struct {
 	ID           string `json:"id"`
 	TenantID     string `json:"tenant_id"`
 	RegulationID string `json:"regulation_id"`
+	IsActive     bool   `json:"is_active"`
 }
 
 // --- Helpers ---
@@ -340,6 +343,7 @@ func (s *RegulationService) AssignTenant(w http.ResponseWriter, r *http.Request)
 // @Success 200 {object} map[string]string
 // @Router /api/v1/regulations/{id}/revoke-tenant [post]
 func (s *RegulationService) RevokeTenant(w http.ResponseWriter, r *http.Request) {
+	s.log.Infof("RevokeTenant endpoint called")
 	regID, err := parseUUIDFromRequest(r, "id")
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "invalid regulation id")
@@ -388,6 +392,7 @@ func (s *RegulationService) GetAssignedTenants(w http.ResponseWriter, r *http.Re
 			ID:           tr.ID.String(),
 			TenantID:     tr.TenantID.String(),
 			RegulationID: tr.RegulationID.String(),
+			IsActive:     tr.IsActive,
 		})
 	}
 	respondJSON(w, http.StatusOK, resp)
@@ -672,6 +677,8 @@ func toRegulationResponse(r *biz.Regulation) *RegulationResponse {
 		AmountPass:     r.AmountPass,
 		AmountFail:     r.AmountFail,
 		AmountNA:       r.AmountNA,
+		IsActive:       r.IsActive,
+		CreatedAt:      r.CreatedAt.Format(time.RFC3339),
 	}
 }
 

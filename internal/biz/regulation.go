@@ -57,13 +57,13 @@ func (uc *RegulationUseCase) CreateRegulation(ctx context.Context, r *Regulation
 
 	// Jika kategori internal dan ada tenant_id, simpan mapping ke tenant_regulation
 	if created.Category == "Internal" && created.TenantID != uuid.Nil {
-		_, err = uc.tenantRegRepo.Create(ctx, &TenantRegulation{
+		_, err = uc.tenantRegRepo.Upsert(ctx, &TenantRegulation{
 			ID:           uuid.New(),
 			TenantID:     created.TenantID,
 			RegulationID: created.ID,
 		})
 		if err != nil {
-			uc.log.Errorf("failed to create tenant regulation mapping: %v", err)
+			uc.log.Errorf("failed to upsert tenant regulation mapping: %v", err)
 		}
 	}
 
@@ -92,13 +92,13 @@ func (uc *RegulationUseCase) UpsertRegulation(ctx context.Context, r *Regulation
 
 	// Jika kategori internal dan ada tenant_id, simpan mapping ke tenant_regulation
 	if created.Category == "Internal" && created.TenantID != uuid.Nil {
-		_, err = uc.tenantRegRepo.Create(ctx, &TenantRegulation{
+		_, err = uc.tenantRegRepo.Upsert(ctx, &TenantRegulation{
 			ID:           uuid.New(),
 			TenantID:     created.TenantID,
 			RegulationID: created.ID,
 		})
 		if err != nil {
-			uc.log.Errorf("failed to create tenant regulation mapping: %v", err)
+			uc.log.Errorf("failed to upsert tenant regulation mapping: %v", err)
 		}
 	}
 
@@ -127,59 +127,96 @@ func (uc *RegulationUseCase) DeleteRegulation(ctx context.Context, id uuid.UUID)
 
 // AssignTenantToRegulation menghubungkan tenant ke suatu regulasi.
 func (uc *RegulationUseCase) AssignTenantToRegulation(ctx context.Context, regulationID, tenantID uuid.UUID) error {
-	_, err := uc.tenantRegRepo.Create(ctx, &TenantRegulation{
+	// 1. Pastikan mapping ada di tenant_regulations (untuk visibilitas umum)
+	_, err := uc.tenantRegRepo.Upsert(ctx, &TenantRegulation{
 		ID:           uuid.New(),
 		TenantID:     tenantID,
 		RegulationID: regulationID,
 	})
-	return err
-}
-
-// RevokeTenantFromRegulation mencopot hak akses tenant ke regulasi dan menghapus assessment periode berjalan.
-func (uc *RegulationUseCase) RevokeTenantFromRegulation(ctx context.Context, regulationID, tenantID uuid.UUID) error {
-	// 1. Hapus mapping akses
-	if err := uc.tenantRegRepo.Delete(ctx, tenantID, regulationID); err != nil {
+	if err != nil {
 		return err
 	}
 
-	// 2. Cari assessment session untuk periode berjalan (tahun ini)
+	// 2. Aktifkan kembali di sesi periode tahun ini (jika ada)
 	currentYear := time.Now().Year()
-	sessions, err := uc.sessionRepo.FindByTenantID(ctx, tenantID)
-	if err != nil {
-		uc.log.WithContext(ctx).Warnf("failed to find sessions for tenant %s: %v", tenantID, err)
-		return nil // Tetap sukses hapus mapping
-	}
+	session, err := uc.sessionRepo.FindByTenantAndYear(ctx, tenantID, currentYear)
+	if err == nil {
+		// Jika ada sesi, aktifkan status is_active di summary
+		_ = uc.regulationAssRepo.Activate(ctx, session.ID, regulationID)
 
-	for _, session := range sessions {
-		if session.PeriodYear == currentYear {
-			// 3. Hapus assessment results untuk regulasi ini di session tersebut
-			if err := uc.resultRepo.DeleteBySessionAndRegulation(ctx, session.ID, regulationID); err != nil {
-				uc.log.WithContext(ctx).Errorf("failed to delete results for session %s, reg %s: %v", session.ID, regulationID, err)
-			}
-			// 4. Hapus summary assessment untuk regulasi ini di session tersebut
-			if err := uc.regulationAssRepo.DeleteBySessionAndRegulation(ctx, session.ID, regulationID); err != nil {
-				uc.log.WithContext(ctx).Errorf("failed to delete summary for session %s, reg %s: %v", session.ID, regulationID, err)
-			}
+		// Cek apakah session menjadi Completed
+		if err := uc.sessionRepo.CheckAndComplete(ctx, session.ID); err != nil {
+			uc.log.WithContext(ctx).Warnf("check and complete session failed: %v", err)
 		}
 	}
 
 	return nil
 }
 
-// GetAssignedTenants mengembalikan daftar tenant yang memiliki akses ke regulasi tertentu.
-func (uc *RegulationUseCase) GetAssignedTenants(ctx context.Context, regulationID uuid.UUID) ([]*TenantRegulation, error) {
-	return uc.tenantRegRepo.FindByRegulationID(ctx, regulationID)
+// RevokeTenantFromRegulation mencabut akses regulasi dari tenant secara non-destruktif.
+// Pemetaan di tenant_regulations tetap dipertahankan agar tenant masih bisa melihat regulasi,
+// namun status aktif di summary penilaian (regulation_assesments) diubah menjadi false.
+func (uc *RegulationUseCase) RevokeTenantFromRegulation(ctx context.Context, regulationID, tenantID uuid.UUID) error {
+	uc.log.WithContext(ctx).Infof("Starting RevokeTenantFromRegulation: tenantID=%s, regulationID=%s", tenantID, regulationID)
+	
+	// 1. Cari assessment session untuk tenant ini di periode tahun ini
+	currentYear := time.Now().Year()
+	session, err := uc.sessionRepo.FindByTenantAndYear(ctx, tenantID, currentYear)
+	if err != nil {
+		// Jika tidak ada sesi untuk tahun ini, tidak ada yang perlu dinonaktifkan di summary
+		uc.log.WithContext(ctx).Warnf("no active session found for tenant %s in year %d, skipping summary deactivation: %v", tenantID, currentYear, err)
+		return nil
+	}
+
+	// 2. Deactivate is_active di regulation_assesments untuk sesi tahun ini
+	// Ini memastikan tombol penilaian hilang di frontend dan data tidak dihitung di dashboard.
+	uc.log.WithContext(ctx).Infof("Deactivating assessment summary: tenant %s, reg %s, session %s, year %d", tenantID, regulationID, session.ID, currentYear)
+	if err := uc.regulationAssRepo.Deactivate(ctx, session.ID, regulationID); err != nil {
+		uc.log.WithContext(ctx).Errorf("failed to deactivate summary for session %s, reg %s: %v", session.ID, regulationID, err)
+		return err
+	}
+
+	// Cek apakah session menjadi Completed (karena regulasi yang belum dijawab dicabut)
+	if err := uc.sessionRepo.CheckAndComplete(ctx, session.ID); err != nil {
+		uc.log.WithContext(ctx).Warnf("check and complete session failed: %v", err)
+	}
+
+	uc.log.WithContext(ctx).Infof("Successfully deactivated assessment for tenant %s, regulation %s", tenantID, regulationID)
+	return nil
 }
 
-// --- RegulationItem Use Cases ---
+func (uc *RegulationUseCase) GetAssignedTenants(ctx context.Context, regulationID uuid.UUID) ([]*TenantRegulation, error) {
+	mappings, err := uc.tenantRegRepo.FindByRegulationID(ctx, regulationID)
+	if err != nil {
+		return nil, err
+	}
 
-// CreateRegulationItem membuat item/pasal baru dalam regulasi.
+	for _, m := range mappings {
+		// Cek status di sesi periode tahun ini
+		currentYear := time.Now().Year()
+		session, err := uc.sessionRepo.FindByTenantAndYear(ctx, m.TenantID, currentYear)
+		if err == nil {
+			// Cek apakah aktif di sesi tersebut
+			active, err := uc.regulationAssRepo.IsActive(ctx, session.ID, regulationID)
+			if err == nil {
+				m.IsActive = active
+			} else {
+				m.IsActive = true // Default jika error
+			}
+		} else {
+			// Jika belum ada sesi untuk tahun ini, defaultnya adalah Aktif (karena sudah di-assign)
+			m.IsActive = true
+		}
+	}
+
+	return mappings, nil
+}
+
 func (uc *RegulationUseCase) CreateRegulationItem(ctx context.Context, item *RegulationItem) (*RegulationItem, error) {
 	if item.RegulationID == uuid.Nil {
 		return nil, fmt.Errorf("regulation_id is required")
 	}
 
-	// Auto-increment if ItemCode is 0 (applies to all categories for manual entry)
 	if item.ItemCode == 0 {
 		max, err := uc.itemRepo.GetMaxItemCode(ctx, item.RegulationID)
 		if err != nil {
@@ -201,18 +238,15 @@ func (uc *RegulationUseCase) UpsertRegulationItem(ctx context.Context, item *Reg
 	if item.ItemCode != 0 {
 		existing, err := uc.itemRepo.FindByRegulationIDAndItemCode(ctx, item.RegulationID, item.ItemCode)
 		if err == nil {
-			// Update existing
 			item.ID = existing.ID
 			return uc.itemRepo.Update(ctx, item)
 		}
 	} else {
-		// For Upsert (Import), we only auto-increment for Internal regulations if ItemCode is 0.
-		// Fetch regulation to check category
 		reg, err := uc.repo.FindByID(ctx, item.RegulationID, uuid.Nil)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if reg.Category == "Internal" {
 			max, err := uc.itemRepo.GetMaxItemCode(ctx, item.RegulationID)
 			if err != nil {
@@ -224,22 +258,18 @@ func (uc *RegulationUseCase) UpsertRegulationItem(ctx context.Context, item *Reg
 		}
 	}
 
-	// Create new
 	item.ID = uuid.New()
 	return uc.itemRepo.Create(ctx, item)
 }
 
-// GetRegulationItem mengambil item berdasarkan ID.
 func (uc *RegulationUseCase) GetRegulationItem(ctx context.Context, id uuid.UUID) (*RegulationItem, error) {
 	return uc.itemRepo.FindByID(ctx, id)
 }
 
-// ListRegulationItems mengembalikan semua item dalam satu regulasi, opsional difilter berdasarkan tenant.
 func (uc *RegulationUseCase) ListRegulationItems(ctx context.Context, regulationID uuid.UUID, tenantID uuid.UUID) ([]*RegulationItem, error) {
 	return uc.itemRepo.FindByRegulationID(ctx, regulationID, tenantID)
 }
 
-// UpdateRegulationItem memperbarui item regulasi.
 func (uc *RegulationUseCase) UpdateRegulationItem(ctx context.Context, item *RegulationItem) (*RegulationItem, error) {
 	return uc.itemRepo.Update(ctx, item)
 }

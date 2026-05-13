@@ -46,7 +46,9 @@ type Regulation struct {
 	AmountPass     int
 	AmountFail     int
 	AmountNA       int
-	CreatedAt      time.Time
+	// IsActive = false jika akses regulasi ini dicabut dari tenant (berdasarkan regulation_assesments.is_active)
+	IsActive   bool
+	CreatedAt  time.Time
 }
 
 // RegulationItem merepresentasikan item/pasal dalam suatu regulasi.
@@ -71,6 +73,7 @@ type TenantRegulation struct {
 	ID           uuid.UUID
 	TenantID     uuid.UUID
 	RegulationID uuid.UUID
+	IsActive     bool // true jika aktif di sesi terbaru
 	CreatedAt    time.Time
 }
 
