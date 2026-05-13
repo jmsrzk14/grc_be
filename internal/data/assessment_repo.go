@@ -518,3 +518,4 @@ func (r *regulationAssessmentRepo) IsActive(ctx context.Context, sessionID, regu
 		}
 		return false, result.Error
 	}
+}
